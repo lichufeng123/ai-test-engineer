@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.2.0 -->
+<!-- FRAMEWORK_VERSION: 0.3.0 -->
 
 # AI 测试工程框架完整手册
 
@@ -98,6 +98,28 @@ App提供H5页面时，H5作为独立探索面。H5验证业务字段、状态�
 
 涉及角色权限、数据范围或关联操作时，必须建立权限矩阵，并验证页面权限和服务端鉴权。
 
+### 7.1 先判定业务拓扑，再生成规则和用例
+
+需求前置分析必须先判断目标功能属于以下哪类：
+
+| 类型 | 含义 | 强制产物 |
+|---|---|---|
+| `isolated` | 只在当前模块内完成，没有已知上下游消费 | 一条本地业务流程和原子断言 |
+| `linked_confirmed` | 已确认存在跨模块、角色、平台或异步链路 | 全量业务流程、步骤断言和端到端用例 |
+| `linked_candidate` | 系统地图提示可能有关联，但证据还不足 | 候选链路、依据和定向确认问题 |
+| `pending` | 现有材料无法判定 | 阻塞项、影响和建议口径 |
+
+AI不能只问“是否有关联”。提问前先读取系统导航、实体模型、角色权限、既有流程、接口与当前上下文，列出推导出的候选模块、角色和平台，再请产品经理确认、排除或补充。已确认的排除项也要记录，避免后续重复追问。
+
+业务规则分成两层：
+
+- `BF-*` 业务流程规则：描述触发条件、参与者、平台、前置状态、步骤、跨模块状态变化、可观察结果和失败分支。
+- `A-*` 原子断言：描述单一可验证行为。每个流程步骤必须引用一个或多个原子断言。
+
+正式用例通过 `covered_flow_ids` 和 `covered_rule_ids` 同时建立追踪。每条已确认业务流程至少有一条完整端到端用例，该用例必须覆盖流程所有步骤引用的断言；局部功能用例继续覆盖字段、边界、异常、权限和幂等。
+
+使用 `ai-test flow-check` 执行确定性门禁，并保存流程到断言、流程到用例覆盖矩阵。完整操作见 [业务流程建模 Playbook](../playbooks/modeling-business-flows/PLAYBOOK.md)。
+
 ## 8. 测试数据工厂
 
 AI默认自主生成确定性测试数据，包括正常、异常、边界、重复、混合、空文件、损坏文件、数量边界和跨环境唯一名称。生成过程必须产生fixture清单和哈希。
@@ -152,8 +174,11 @@ SYSTEM_DISCOVERY（按条件）
 FEATURE_DISCOVERY
 REQUIREMENT_FREEZE
 CURRENT_VALIDATION
+BUSINESS_TOPOLOGY_ANALYSIS
+BUSINESS_FLOW_REVIEW
 ASSERTION_DESIGN
 CASE_DESIGN
+FLOW_COVERAGE_GATE
 DATA_BUILD
 AUTOMATION_HANDOFF
 ASSET_VALIDATION

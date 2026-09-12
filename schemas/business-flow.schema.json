@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/ai-test-engineer/business-flow.schema.json",
+  "title": "AI Test Engineer business-flow contract",
+  "type": "object",
+  "required": [
+    "business_flow_contract_version",
+    "business_topology",
+    "assertions",
+    "business_flows"
+  ],
+  "properties": {
+    "business_flow_contract_version": {"const": 1},
+    "business_topology": {
+      "type": "object",
+      "required": [
+        "classification",
+        "confirmed_module_ids",
+        "confirmed_platforms",
+        "candidate_links",
+        "excluded_links",
+        "basis"
+      ],
+      "properties": {
+        "classification": {
+          "enum": ["isolated", "linked_confirmed", "linked_candidate", "pending"]
+        },
+        "confirmed_module_ids": {"type": "array", "items": {"type": "string"}},
+        "confirmed_platforms": {"type": "array", "items": {"type": "string"}},
+        "candidate_links": {"type": "array"},
+        "excluded_links": {"type": "array"},
+        "basis": {"type": "array"}
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {"id": {"pattern": "^A-[A-Z0-9]+-[0-9]{3}$"}}
+      }
+    },
+    "business_flows": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/business_flow"}
+    }
+  },
+  "$defs": {
+    "business_flow": {
+      "type": "object",
+      "required": [
+        "id", "name", "priority", "status", "trigger", "actors", "platforms",
+        "preconditions", "start_state", "end_state", "steps", "failure_branches",
+        "source_refs"
+      ],
+      "properties": {
+        "id": {"pattern": "^BF-[A-Z0-9]+-[0-9]{3}$"},
+        "priority": {"enum": ["P0", "P1", "P2"]},
+        "status": {"enum": ["confirmed", "pending", "risk", "已确认", "待确认", "带风险"]},
+        "actors": {"type": "array", "items": {"type": "string"}},
+        "platforms": {"type": "array", "items": {"type": "string"}},
+        "preconditions": {"type": "array"},
+        "failure_branches": {"type": "array"},
+        "source_refs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "sequence", "actor", "event", "owner_module_id", "related_module_ids",
+              "from_state", "to_state", "observable_output", "covered_assertion_ids"
+            ],
+            "properties": {
+              "sequence": {"type": "integer", "minimum": 1},
+              "related_module_ids": {"type": "array", "items": {"type": "string"}},
+              "covered_assertion_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import json
+import re
 import struct
 import tempfile
 import unittest
@@ -113,6 +114,21 @@ class DocumentationGuardTest(unittest.TestCase):
         result = check_documentation_sync(ROOT)
         self.assertEqual(result["status"], "passed")
 
+    def test_package_versions_match_framework_manifest(self):
+        version = json.loads(
+            (ROOT / "framework-manifest.json").read_text(encoding="utf-8")
+        )["framework_version"]
+        for path in (ROOT / "pyproject.toml", ROOT / "setup.cfg"):
+            match = re.search(
+                r"^version\s*=\s*[\"']?([^\"'\s]+)",
+                path.read_text(encoding="utf-8"),
+                re.MULTILINE,
+            )
+            self.assertIsNotNone(match, path)
+            self.assertEqual(match.group(1), version, path)
+        init_text = (ROOT / "src/ai_test_framework/__init__.py").read_text(encoding="utf-8")
+        self.assertIn(f'__version__ = "{version}"', init_text)
+
     def test_readme_and_handbook_must_match_manifest_version(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -121,10 +137,24 @@ class DocumentationGuardTest(unittest.TestCase):
                 json.dumps({"framework_version": "0.1.0"}), encoding="utf-8"
             )
             (root / "README.md").write_text("<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8")
+            (root / "README.zh-CN.md").write_text("<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8")
             (root / "docs/FRAMEWORK.md").write_text("<!-- FRAMEWORK_VERSION: 0.0.9 -->", encoding="utf-8")
             result = check_documentation_sync(root)
             self.assertEqual(result["status"], "failed")
             self.assertIn("docs/FRAMEWORK.md", result["outdated_documents"])
+
+    def test_chinese_readme_is_required(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            (root / "framework-manifest.json").write_text(
+                json.dumps({"framework_version": "0.3.0"}), encoding="utf-8"
+            )
+            (root / "README.md").write_text("<!-- FRAMEWORK_VERSION: 0.3.0 -->", encoding="utf-8")
+            (root / "docs/FRAMEWORK.md").write_text("<!-- FRAMEWORK_VERSION: 0.3.0 -->", encoding="utf-8")
+            result = check_documentation_sync(root)
+            self.assertEqual(result["status"], "failed")
+            self.assertIn("README.zh-CN.md", result["missing_documents"])
 
 
 class EvidenceGuardTest(unittest.TestCase):

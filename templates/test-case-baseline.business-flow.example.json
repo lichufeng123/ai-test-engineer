@@ -1,0 +1,11 @@
+{
+  "baseline_id": "approved-baseline-example",
+  "cases": [
+    {
+      "id": "TC-ORDER-001",
+      "title": "Submit an order and observe downstream fulfillment",
+      "covered_flow_ids": ["BF-ORDER-001"],
+      "covered_rule_ids": ["A-ORDER-001", "A-FULFILLMENT-001"]
+    }
+  ]
+}

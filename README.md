@@ -1,6 +1,8 @@
-<!-- FRAMEWORK_VERSION: 0.2.0 -->
+<!-- FRAMEWORK_VERSION: 0.3.0 -->
 
 # AI Test Engineer
+
+English | [简体中文](README.zh-CN.md)
 
 AI Test Engineer is a portable, evidence-first framework for guiding an AI agent through software testing. It connects requirement understanding, system and feature discovery, approved test-case baselines, fixture generation, execution, evidence review, reporting, and reusable execution assets.
 
@@ -28,6 +30,17 @@ ai-test discovery-plan \
 ```
 
 Use a reviewed test-case baseline as the single source of truth. The framework records its stable case IDs and hash in an execution handoff; UI automation is not a second case-management system.
+
+Before generating cases, classify the feature as isolated, linked, or pending. Infer likely upstream and downstream links from the system map, role model, entity model, and existing context before asking the product owner. Confirmed flows receive stable `BF-*` IDs and reference atomic `A-*` assertions; every confirmed flow must have at least one complete end-to-end case.
+
+Validate this contract with:
+
+```bash
+ai-test flow-check \
+  --input ./rules/business-flows.json \
+  --cases ./cases/approved-baseline.json \
+  --matrix-output ./runs/latest/flow-coverage.json
+```
 
 Generate deterministic test fixtures:
 

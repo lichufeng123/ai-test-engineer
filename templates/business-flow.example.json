@@ -1,0 +1,50 @@
+{
+  "business_flow_contract_version": 1,
+  "business_topology": {
+    "classification": "linked_confirmed",
+    "confirmed_module_ids": ["ORDER", "FULFILLMENT"],
+    "confirmed_platforms": ["web", "app"],
+    "candidate_links": [],
+    "excluded_links": [],
+    "basis": [
+      {
+        "type": "requirement",
+        "reference": "REQ-ORDER-001",
+        "status": "confirmed"
+      }
+    ]
+  },
+  "assertions": [
+    {"id": "A-ORDER-001"},
+    {"id": "A-FULFILLMENT-001"}
+  ],
+  "business_flows": [
+    {
+      "id": "BF-ORDER-001",
+      "name": "Order submission to fulfillment",
+      "priority": "P0",
+      "status": "confirmed",
+      "trigger": "A customer submits an order",
+      "actors": ["customer", "system"],
+      "platforms": ["web", "app"],
+      "preconditions": ["The cart contains an available item"],
+      "start_state": "cart_ready",
+      "end_state": "fulfillment_pending",
+      "steps": [
+        {
+          "sequence": 1,
+          "actor": "system",
+          "event": "Create the order and enqueue fulfillment",
+          "owner_module_id": "ORDER",
+          "related_module_ids": ["FULFILLMENT"],
+          "from_state": "cart_ready",
+          "to_state": "fulfillment_pending",
+          "observable_output": "The app displays pending fulfillment",
+          "covered_assertion_ids": ["A-ORDER-001", "A-FULFILLMENT-001"]
+        }
+      ],
+      "failure_branches": [],
+      "source_refs": ["REQ-ORDER-001"]
+    }
+  ]
+}

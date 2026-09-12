@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .data_factory import generate_fixtures
+from .business_flows import check_business_flows, check_flow_case_coverage
 from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
@@ -51,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     data.add_argument("--spec", required=True)
     data.add_argument("--output", required=True)
 
+    flows = commands.add_parser("flow-check", help="校验业务流程规则和端到端用例覆盖")
+    flows.add_argument("--input", required=True, help="包含业务拓扑、流程和原子断言的 JSON")
+    flows.add_argument("--cases", help="可选：包含 cases 数组的测试用例基线 JSON")
+    flows.add_argument("--matrix-output", help="可选：写出流程到断言和流程到用例矩阵")
+
     return parser
 
 
@@ -76,6 +82,30 @@ def main(argv=None) -> int:
     if args.command == "data-generate":
         value = generate_fixtures(_read(args.spec), Path(args.output))
         value["status"] = "generated"
+        return _emit(value)
+    if args.command == "flow-check":
+        payload = _read(args.input)
+        value = check_business_flows(payload)
+        if args.cases and value["status"] == "passed":
+            case_payload = _read(args.cases)
+            cases = case_payload.get("cases", []) if isinstance(case_payload, dict) else []
+            coverage = check_flow_case_coverage(payload.get("business_flows", []), cases)
+            value["flow_case_coverage"] = coverage.get("flows", [])
+            if coverage["status"] == "failed":
+                value["status"] = "failed"
+                value["errors"].extend(coverage["errors"])
+                value["error_codes"] = sorted(set(value["error_codes"] + coverage["error_codes"]))
+        if args.matrix_output:
+            matrix_path = Path(args.matrix_output)
+            matrix_path.parent.mkdir(parents=True, exist_ok=True)
+            matrix_path.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "flow_assertion_matrix": value.get("flow_assertion_matrix", []),
+                    "flow_case_coverage": value.get("flow_case_coverage", []),
+                }, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
         return _emit(value)
     return 2
 

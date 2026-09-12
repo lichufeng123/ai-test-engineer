@@ -12,7 +12,7 @@ VERSION_RE = re.compile(r"<!--\s*FRAMEWORK_VERSION:\s*([^\s]+)\s*-->")
 def check_documentation_sync(root: Path) -> Dict[str, Any]:
     root = Path(root)
     manifest_path = root / "framework-manifest.json"
-    required = [root / "README.md", root / "docs/FRAMEWORK.md"]
+    required = [root / "README.md", root / "README.zh-CN.md", root / "docs/FRAMEWORK.md"]
     missing = [str(path.relative_to(root)) for path in [manifest_path, *required] if not path.exists()]
     if missing:
         return {"status": "failed", "missing_documents": missing, "outdated_documents": []}

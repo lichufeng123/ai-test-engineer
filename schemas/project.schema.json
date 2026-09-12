@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-test/project.schema.json",
+  "title": "AI Test Project",
+  "type": "object",
+  "required": ["schema_version", "name", "system_id", "environments", "platforms", "case_generation"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "name": {"type": "string", "minLength": 1},
+    "system_id": {"type": "string", "minLength": 1},
+    "environments": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "platforms": {
+      "type": "array",
+      "items": {"enum": ["web", "app", "h5", "miniapp"]},
+      "uniqueItems": true
+    },
+    "case_generation": {
+      "type": "object",
+      "required": ["adapter", "single_official_baseline"],
+      "properties": {
+        "adapter": {"const": "approved-test-case-baseline"},
+        "single_official_baseline": {"const": true}
+      }
+    }
+  }
+}

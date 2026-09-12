@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Automation Execution Handoff",
+  "type": "object",
+  "required": ["schema_version", "run_id", "baseline_id", "sources", "execution_plan", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string"},
+    "baseline_id": {"type": "string"},
+    "sources": {"type": "array"},
+    "execution_plan": {"type": "object"},
+    "assets": {"type": "object"},
+    "credentials": {"not": {}}
+  }
+}

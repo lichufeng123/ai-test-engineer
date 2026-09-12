@@ -1,0 +1,25 @@
+{
+  "feature_id": "example-import-export",
+  "fixtures": [
+    {
+      "fixture_id": "IMPORT-VALID-001",
+      "format": "xlsx",
+      "purpose": "合法最小数据",
+      "expected": "success",
+      "cleanup": "retain_for_regression",
+      "writes_business_data": true,
+      "headers": ["module", "question"],
+      "rows": [["regression-module", "regression-question"]]
+    },
+    {
+      "fixture_id": "IMPORT-INVALID-001",
+      "format": "xlsx",
+      "purpose": "缺少必填题目",
+      "expected": "validation_error_no_write",
+      "cleanup": "none",
+      "writes_business_data": false,
+      "headers": ["module", "question"],
+      "rows": [["regression-module", ""]]
+    }
+  ]
+}

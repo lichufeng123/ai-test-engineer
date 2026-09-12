@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "System Exploration Asset Register",
+  "type": "object",
+  "required": ["schema_version", "system_id", "status", "product_version", "environments", "platforms", "maturity", "last_verified_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "system_id": {"type": "string"},
+    "status": {"enum": ["verified", "stale", "missing", "local_unbacked"]},
+    "product_version": {"type": "string"},
+    "environments": {"type": "array", "items": {"type": "string"}},
+    "platforms": {"type": "array", "items": {"enum": ["web", "app", "h5", "miniapp"]}},
+    "maturity": {"enum": ["L0", "L1", "L2", "L3", "L4"]},
+    "last_verified_at": {"type": "string"}
+  }
+}

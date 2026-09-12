@@ -1,0 +1,15 @@
+{
+  "feature_id": "question-import",
+  "fixtures": [
+    {
+      "fixture_id": "QBI-VALID-001",
+      "format": "xlsx",
+      "purpose": "合法最小数据",
+      "expected": "success",
+      "cleanup": "retain_for_regression",
+      "writes_business_data": true,
+      "headers": ["模块", "题目"],
+      "rows": [["自动化回归模块", "自动化回归题目"]]
+    }
+  ]
+}

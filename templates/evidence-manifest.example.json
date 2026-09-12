@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_id": "RUN-EXAMPLE",
+  "items": [
+    {
+      "case_id": "TC-001",
+      "kind": "screenshot",
+      "phase": "result",
+      "platform": "web",
+      "path": "evidence/TC-001-result.png",
+      "required": true,
+      "report_section": "V01"
+    }
+  ]
+}

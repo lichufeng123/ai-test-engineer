@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-test-engineer"
+version = "0.2.0"
+description = "Portable orchestration and quality gates for AI-assisted software testing"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "AI Test Engineer contributors"}]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.scripts]
+ai-test = "ai_test_framework.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/lichufeng123/ai-test-engineer"
+Issues = "https://github.com/lichufeng123/ai-test-engineer/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fixture Manifest",
+  "type": "object",
+  "required": ["schema_version", "feature_id", "fixtures"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "feature_id": {"type": "string"},
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fixture_id", "purpose", "expected", "cleanup", "path", "sha256"],
+        "properties": {
+          "fixture_id": {"type": "string"},
+          "purpose": {"type": "string"},
+          "expected": {"type": "string"},
+          "cleanup": {"type": "string"},
+          "writes_business_data": {"type": "boolean"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    }
+  }
+}

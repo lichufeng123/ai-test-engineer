@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence Manifest",
+  "type": "object",
+  "required": ["schema_version", "run_id", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "kind", "phase", "platform", "path", "required"],
+        "properties": {
+          "case_id": {"type": "string"},
+          "kind": {"enum": ["screenshot", "video", "trace", "request", "response", "curl", "data_readback"]},
+          "phase": {"enum": ["before", "action", "result", "refresh", "relogin", "downstream", "failure"]},
+          "platform": {"enum": ["web", "app", "h5", "miniapp", "api", "database"]},
+          "path": {"type": "string"},
+          "required": {"type": "boolean"},
+          "report_section": {"type": "string"}
+        }
+      }
+    }
+  }
+}

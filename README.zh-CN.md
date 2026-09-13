@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.3.0 -->
+<!-- FRAMEWORK_VERSION: 0.4.0 -->
 
 # AI Test Engineer
 
@@ -7,6 +7,25 @@
 AI Test Engineer 是一套可移植、以证据为先的 AI 测试工程框架。它把需求理解、系统与功能探索、已审核测试用例、测试数据、自动化执行、证据复核、测试报告和执行资产反哺连接为一条稳定流程。
 
 核心仅依赖 Python 标准库、Markdown 和 JSON Schema，可供不同 AI 助手及人工测试工程师共同使用。Codex、Playwright、Minium 等能力通过适配器接入，不改变正式需求、业务规则和测试用例的唯一基线。
+
+## 跨客户端 Skill 与可选插件
+
+所有工作流 Skill 的唯一源码位于 `.agents/skills/`。这是兼容 Agent Skills 的客户端共享的发现目录；客户端打开本仓库后，可以直接发现项目级 Skill。需要安装到当前用户时运行：
+
+```bash
+ai-test skills-check --root .
+ai-test skills-install --root . --client universal
+```
+
+当前客户端仍只扫描专用目录时，可以追加 `--client codex` 建立 Codex 兼容链接。安装器默认不覆盖同名 Skill；显式传入 `--replace` 时，也会先移动到带时间戳的备份目录。
+
+仓库同时支持构建可选的 Codex/ChatGPT 插件。插件包从同一份 `.agents/skills/` 临时生成，不维护第二份源码：
+
+```bash
+ai-test plugin-build --root . --output ./dist/ai-test-engineer
+```
+
+生成目录包含插件要求的 `.codex-plugin/plugin.json` 和 `skills/`。其他客户端继续直接使用 `.agents/skills/`，无需安装插件。完整边界见[跨客户端 Skill 与插件分发](docs/skill-and-plugin-distribution.md)。
 
 ## 快速开始
 
@@ -92,6 +111,8 @@ ai-test evidence-check \
 ## 项目结构
 
 - `src/ai_test_framework/`：CLI 和可复用的确定性校验能力。
+- `.agents/skills/`：跨客户端测试工作流 Skill 的唯一源码。
+- `plugin/plugin.json`：构建可选插件包时使用的元数据。
 - `playbooks/`：不依赖特定 AI 产品的操作流程。
 - `adapters/`：测试用例基线和工具接入说明。
 - `schemas/`、`templates/`：机器可读契约和安全示例。

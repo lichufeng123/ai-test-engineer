@@ -1,0 +1,20 @@
+{
+  "name": "ai-test-engineer",
+  "version": "0.4.0",
+  "description": "Portable AI testing workflow skills, deterministic gates, and execution-asset practices for evidence-based software testing.",
+  "author": {
+    "name": "AI Test Engineer contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AI Test Engineer",
+    "shortDescription": "Run a traceable AI software-testing lifecycle.",
+    "longDescription": "AI Test Engineer guides requirement review, system and feature discovery, business-flow modeling, test-case generation, guarded execution, evidence reporting, and reusable asset feedback.",
+    "developerName": "AI Test Engineer contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Skill"
+    ],
+    "defaultPrompt": "Use $ai-test-workflow to route this testing task through the appropriate reviewed workflow."
+  }
+}

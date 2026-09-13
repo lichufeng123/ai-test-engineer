@@ -1,9 +1,11 @@
 {
   "name": "ai-test-engineer",
-  "framework_version": "0.3.0",
-  "documentation_version": "0.3.0",
+  "framework_version": "0.4.0",
+  "documentation_version": "0.4.0",
   "python": ">=3.9",
   "canonical_handbook": "docs/FRAMEWORK.md",
+  "canonical_skills_dir": ".agents/skills",
+  "plugin_manifest_template": "plugin/plugin.json",
   "case_generation_adapter": "approved-test-case-baseline",
   "supported_platforms": ["web", "app", "h5", "miniapp"]
 }

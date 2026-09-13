@@ -2,6 +2,8 @@
 
 Read `README.md` and `docs/FRAMEWORK.md` before operating a project. Treat approved requirements and the reviewed test-case baseline as the source of truth for expected behavior.
 
+Discover reusable workflows from `.agents/skills/`. This directory is the canonical cross-client source; client-specific skill folders and generated plugin packages are installation artifacts and must not be edited as independent copies.
+
 The agent owns discovery, fixture planning, automation handoff, execution evidence, issue triage, reports, and reusable execution assets. Ask focused questions about unclear business decisions while continuing independent work.
 
 Before rule or case generation, classify the feature topology as isolated, linked, candidate, or pending. Infer likely links from the system map, roles, entities, existing flows, interfaces, and current context before asking the product owner. Present those candidates in the question instead of asking a context-free yes/no question.

@@ -10,6 +10,7 @@ from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
 from .project import initialize_project
+from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
 
 
 def _read(path: str):
@@ -56,6 +57,25 @@ def build_parser() -> argparse.ArgumentParser:
     flows.add_argument("--input", required=True, help="包含业务拓扑、流程和原子断言的 JSON")
     flows.add_argument("--cases", help="可选：包含 cases 数组的测试用例基线 JSON")
     flows.add_argument("--matrix-output", help="可选：写出流程到断言和流程到用例矩阵")
+
+    skills_check = commands.add_parser("skills-check", help="校验跨客户端 Skill 与插件清单")
+    skills_check.add_argument("--root", default=".")
+
+    skills_install = commands.add_parser("skills-install", help="安装跨客户端用户级 Skill")
+    skills_install.add_argument("--root", default=".")
+    skills_install.add_argument(
+        "--client",
+        action="append",
+        choices=["universal", "codex"],
+        dest="clients",
+        help="安装目标；可重复指定。默认 universal",
+    )
+    skills_install.add_argument("--mode", choices=["symlink", "copy"], default="symlink")
+    skills_install.add_argument("--replace", action="store_true", help="备份后替换已有同名 Skill")
+
+    plugin_build = commands.add_parser("plugin-build", help="从跨客户端 Skill 构建 Codex 插件包")
+    plugin_build.add_argument("--root", default=".")
+    plugin_build.add_argument("--output", required=True)
 
     return parser
 
@@ -107,6 +127,19 @@ def main(argv=None) -> int:
                 encoding="utf-8",
             )
         return _emit(value)
+    if args.command == "skills-check":
+        return _emit(validate_portable_skills(Path(args.root)))
+    if args.command == "skills-install":
+        return _emit(
+            install_portable_skills(
+                Path(args.root),
+                clients=args.clients or ["universal"],
+                mode=args.mode,
+                replace=args.replace,
+            )
+        )
+    if args.command == "plugin-build":
+        return _emit(build_portable_plugin(Path(args.root), Path(args.output)))
     return 2
 
 

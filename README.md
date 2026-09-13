@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.3.0 -->
+<!-- FRAMEWORK_VERSION: 0.4.0 -->
 
 # AI Test Engineer
 
@@ -7,6 +7,25 @@ English | [简体中文](README.zh-CN.md)
 AI Test Engineer is a portable, evidence-first framework for guiding an AI agent through software testing. It connects requirement understanding, system and feature discovery, approved test-case baselines, fixture generation, execution, evidence review, reporting, and reusable execution assets.
 
 The core uses Python's standard library, Markdown, and JSON Schema. It works with any AI assistant; adapters describe optional integrations for Codex, Playwright, and Minium.
+
+## Portable skills and optional plugin
+
+The canonical workflow skills live in `.agents/skills/`, the cross-client discovery location used by Agent Skills-compatible tools. Opening this repository makes the project-scoped skills available to compatible agents. To install them for the current user:
+
+```bash
+ai-test skills-check --root .
+ai-test skills-install --root . --client universal
+```
+
+Add `--client codex` to create a Codex compatibility link as well. Existing skills are never overwritten unless `--replace` is provided; replacement first moves them to a timestamped backup.
+
+The repository is also an optional Codex/ChatGPT plugin source. The plugin package is generated from the same canonical skills, so it does not maintain a second copy:
+
+```bash
+ai-test plugin-build --root . --output ./dist/ai-test-engineer
+```
+
+The generated package contains `.codex-plugin/plugin.json` and the plugin-required `skills/` directory. Other clients can continue using `.agents/skills/` without installing the plugin. See [skill and plugin distribution](docs/skill-and-plugin-distribution.md).
 
 ## Quick start
 
@@ -64,6 +83,8 @@ Read the [framework handbook](docs/FRAMEWORK.md) for the complete workflow and t
 ## Project layout
 
 - `src/ai_test_framework/`: CLI and reusable framework primitives.
+- `.agents/skills/`: the single cross-client source for testing workflow skills.
+- `plugin/plugin.json`: metadata used to build the optional plugin package.
 - `playbooks/`: tool-independent testing procedures.
 - `adapters/`: optional integrations and baseline guidance.
 - `schemas/` and `templates/`: machine-readable contracts and safe examples.

@@ -1,7 +1,7 @@
 {
   "name": "ai-test-engineer",
-  "framework_version": "0.4.0",
-  "documentation_version": "0.4.0",
+  "framework_version": "0.4.1",
+  "documentation_version": "0.4.1",
   "python": ">=3.9",
   "canonical_handbook": "docs/FRAMEWORK.md",
   "canonical_skills_dir": ".agents/skills",

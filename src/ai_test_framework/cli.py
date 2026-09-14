@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .data_factory import generate_fixtures
 from .business_flows import check_business_flows, check_flow_case_coverage
+from .case_quality import check_case_granularity
 from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
@@ -57,6 +58,10 @@ def build_parser() -> argparse.ArgumentParser:
     flows.add_argument("--input", required=True, help="包含业务拓扑、流程和原子断言的 JSON")
     flows.add_argument("--cases", help="可选：包含 cases 数组的测试用例基线 JSON")
     flows.add_argument("--matrix-output", help="可选：写出流程到断言和流程到用例矩阵")
+
+    granularity = commands.add_parser("case-granularity-check", help="检查规则是否只被大体量端到端用例间接覆盖")
+    granularity.add_argument("--cases", required=True, help="包含 cases 数组的测试用例基线 JSON")
+    granularity.add_argument("--max-e2e-only-ratio", type=float, default=0.35)
 
     skills_check = commands.add_parser("skills-check", help="校验跨客户端 Skill 与插件清单")
     skills_check.add_argument("--root", default=".")
@@ -127,6 +132,10 @@ def main(argv=None) -> int:
                 encoding="utf-8",
             )
         return _emit(value)
+    if args.command == "case-granularity-check":
+        payload = _read(args.cases)
+        cases = payload.get("cases", []) if isinstance(payload, dict) else []
+        return _emit(check_case_granularity(cases, args.max_e2e_only_ratio))
     if args.command == "skills-check":
         return _emit(validate_portable_skills(Path(args.root)))
     if args.command == "skills-install":

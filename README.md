@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.4.0 -->
+<!-- FRAMEWORK_VERSION: 0.4.1 -->
 
 # AI Test Engineer
 
@@ -52,6 +52,8 @@ Use a reviewed test-case baseline as the single source of truth. The framework r
 
 Before generating cases, classify the feature as isolated, linked, or pending. Infer likely upstream and downstream links from the system map, role model, entity model, and existing context before asking the product owner. Confirmed flows receive stable `BF-*` IDs and reference atomic `A-*` assertions; every confirmed flow must have at least one complete end-to-end case.
 
+The complete baseline must also pass an execution-granularity gate. End-to-end cases prove the whole business flow; they do not replace cases that can be prepared, executed, judged, evidenced, and rerun independently. Equivalent boundaries for one field may be parameterized, while different roles, platforms, state transitions, failure mechanisms, server-side authorization checks, or side effects remain separate.
+
 Validate this contract with:
 
 ```bash
@@ -59,6 +61,9 @@ ai-test flow-check \
   --input ./rules/business-flows.json \
   --cases ./cases/approved-baseline.json \
   --matrix-output ./runs/latest/flow-coverage.json
+
+ai-test case-granularity-check \
+  --cases ./cases/review-draft.json
 ```
 
 Generate deterministic test fixtures:

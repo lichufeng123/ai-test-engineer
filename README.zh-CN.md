@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.4.0 -->
+<!-- FRAMEWORK_VERSION: 0.4.1 -->
 
 # AI Test Engineer
 
@@ -61,11 +61,16 @@ ai-test discovery-plan \
 
 每个流程步骤必须引用原子断言；每条已确认流程至少需要一条覆盖完整步骤的端到端用例。用例通过 `covered_flow_ids` 和 `covered_rule_ids` 建立追踪。
 
+完整用例基线还要通过执行粒度门禁。端到端用例用于证明整条业务链路，不能替代可单独准备数据、执行、判定、取证和重跑的功能、边界、异常、权限矩阵及数据一致性用例。同一字段的等价边界可以参数化；不同角色、平台、状态迁移、失败机制、服务端越权或副作用必须拆分。
+
 ```bash
 ai-test flow-check \
   --input ./rules/business-flows.json \
   --cases ./cases/approved-baseline.json \
   --matrix-output ./runs/latest/flow-coverage.json
+
+ai-test case-granularity-check \
+  --cases ./cases/review-draft.json
 ```
 
 ## 测试数据与证据

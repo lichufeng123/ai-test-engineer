@@ -4,7 +4,7 @@ description: Use when approved requirements and business rules must become revie
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # 测试用例生成与反哺
@@ -30,6 +30,14 @@ metadata:
 - 列表、详情、统计、接口、App、H5、小程序或设备端回读一致性。
 
 每条已确认 `BF-*` 至少有一条完整端到端用例，并引用流程所有步骤涉及的 `A-*`。局部用例不能代替业务链路。
+
+端到端用例也不能代替细粒度执行层。每个适用规则或紧密耦合规则簇至少要有一个可单独准备数据、执行、判定、取证和重跑的用例入口。字段等价边界可以参数化；不同角色、平台、状态迁移、失败机制、服务端越权或副作用必须拆开。规则覆盖率达到 100% 后仍须执行粒度门禁：
+
+```bash
+ai-test case-granularity-check --cases cases/review-draft.json
+```
+
+门禁失败时保留端到端核心套件，补充独立功能、边界、异常、权限矩阵和数据一致性用例后重新审核；不得用省略原子层来修正模板质量问题。
 
 ```bash
 ai-test flow-check \

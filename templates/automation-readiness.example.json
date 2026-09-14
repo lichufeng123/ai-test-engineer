@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "plan_id": "ARP-MEMBER-IMPORT-001",
+  "requirement_baseline_id": "REQ-MEMBER-IMPORT-001",
+  "feature": "成员批量导入",
+  "automation_scope": {
+    "platforms": ["web"],
+    "environments": ["sit", "pre", "production"],
+    "business_flow_ids": ["BF-MEMBER-IMPORT-001"],
+    "candidate_case_categories": ["合法导入", "字段校验", "重复导入", "导入后编辑与列表回读"],
+    "case_ids": ["TC-MEMBER-001", "TC-MEMBER-002"]
+  },
+  "case_requirements": [
+    {
+      "case_id": "TC-MEMBER-001",
+      "required_role_ids": ["org_admin"],
+      "required_fixture_ids": ["valid_member_xlsx"],
+      "required_environment_ids": ["sit", "pre", "production"]
+    },
+    {
+      "case_id": "TC-MEMBER-002",
+      "required_role_ids": ["org_admin"],
+      "required_fixture_ids": ["duplicate_member_xlsx"],
+      "required_environment_ids": ["sit", "pre", "production"]
+    }
+  ],
+  "account_requirements": [
+    {"role_id": "org_admin", "purpose": "打开导入入口并回读结果", "status": "needed"}
+  ],
+  "fixture_requirements": [
+    {"fixture_id": "valid_member_xlsx", "purpose": "合法导入", "source_or_factory": "data-generate", "case_ids": ["TC-MEMBER-001"], "status": "needed"},
+    {"fixture_id": "duplicate_member_xlsx", "purpose": "重复数据校验", "source_or_factory": "data-generate", "case_ids": ["TC-MEMBER-002"], "status": "needed"}
+  ],
+  "evidence_plan": {
+    "screenshots": ["导入前列表", "导入结果反馈", "导入后列表与详情"],
+    "videos": ["合法导入及回读核心链路"]
+  },
+  "manual_only_case_ids": [],
+  "open_questions": []
+}

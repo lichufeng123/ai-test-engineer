@@ -4,7 +4,7 @@ description: Use when reviewed requirements, rules, and approved cases must be e
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # 需求驱动的功能测试执行
@@ -17,11 +17,11 @@ metadata:
 
 ```text
 ASSET_LOAD → ASSET_VALIDATION → SYSTEM_DISCOVERY（必要时）
-→ EXECUTION_GATE → TEST_EXECUTION → ISSUE_TRIAGE
+→ PRE_EXECUTION_CONFIRMATION → EXECUTION_GATE → TEST_EXECUTION → ISSUE_TRIAGE
 → RESULT_WRITEBACK → REPORT_REPAIR → ASSET_FEEDBACK → COMPLETE
 ```
 
-开始写操作前必须具备：已审核需求与规则、唯一正式用例基线及哈希、角色/权限、入口、状态机、缓存与持久化、异步窗口、数据方案、范围外事项、风险动作和证据计划。缺失项明确标为阻塞，不能边操作边把猜测当预期。
+开始写操作前必须具备：已审核需求与规则、唯一正式用例基线及哈希、角色/权限、入口、状态机、缓存与持久化、异步窗口、数据方案、范围外事项、风险动作和证据计划。执行前必须对照需求阶段的 `automation_readiness_plan`，重新确认功能、目标环境、适用用例范围、账号角色、fixture和排除项，并生成引用计划哈希的 `pre_execution_confirmation` 与准备度回执。缺失项明确标为阻塞，不能边操作边把猜测当预期。
 
 ## 执行规则
 
@@ -32,6 +32,7 @@ ASSET_LOAD → ASSET_VALIDATION → SYSTEM_DISCOVERY（必要时）
 - UI单步两分钟无页面、网络、下载、日志或状态进展时停止等待，保留现场并汇报。
 - 发生页面或接口错误时，保存脱敏请求、响应、时间、用例ID和可复现cURL到运行目录的 `errors/`；敏感请求头和凭据必须移除。
 - 生产写入、删除、金额、库存、真实通知和批量数据按项目授权边界执行。
+- 某条用例缺少账号角色、前置状态或测试数据时，只将该用例标为阻塞并登记一次 `missing_prerequisites.json`，随后继续执行其他已就绪用例。相同前置指纹未变化前不得反复登录、刷新、点击或重跑；收到补充数据或角色后只恢复受影响用例。
 
 ## 证据与结论
 

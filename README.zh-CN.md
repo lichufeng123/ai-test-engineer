@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.4.1 -->
+<!-- FRAMEWORK_VERSION: 0.5.0 -->
 
 # AI Test Engineer
 
@@ -73,6 +73,23 @@ ai-test case-granularity-check \
   --cases ./cases/review-draft.json
 ```
 
+## 自动化准备度规划与执行前复核
+
+需求说明书审核通过后，立即梳理可自动化范围、人工专属范围、目标环境和平台、所需账号角色、测试数据、证据点与风险动作。此时还没有正式用例ID的，先记录候选用例类别；正式用例审核后绑定稳定ID并重新冻结哈希。
+
+```bash
+ai-test readiness-plan \
+  --input ./runs/latest/automation-readiness-source.json \
+  --output ./runs/latest/automation_readiness_plan.json
+
+ai-test readiness-check \
+  --plan ./runs/latest/automation_readiness_plan.json \
+  --confirmation ./runs/latest/pre_execution_confirmation.json \
+  --output ./runs/latest/execution_readiness_receipt.json
+```
+
+实际执行前重新确认功能、环境、适用用例、账号角色、fixture和排除项。缺账号或数据只阻塞受影响用例并登记一次；相同前置指纹未变化前不重复尝试，其他已就绪用例继续执行。
+
 ## 测试数据与证据
 
 框架可以按声明生成确定性的正常、异常、边界、重复、混合、空文件、损坏文件和数量边界数据，并记录清单与哈希：
@@ -100,9 +117,11 @@ ai-test evidence-check \
 需求接收
 → 系统与功能探索
 → 需求冻结与当前知识校验
+→ 自动化准备度规划
 → 业务拓扑分析与流程评审
 → 原子断言和正式用例设计
 → 数据与自动化交接
+→ 执行前范围、环境、账号角色和数据复核
 → 资产校验和测试执行
 → 问题定性与回归
 → 证据化报告

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "plan_id": "ARP-MEMBER-IMPORT-001",
+  "plan_sha256": "替换为readiness-plan输出的SHA-256",
+  "target_environment": "sit",
+  "scope_confirmed": true,
+  "environment_confirmed": true,
+  "account_roles_confirmed": true,
+  "data_plan_confirmed": true,
+  "available_role_ids": ["org_admin"],
+  "ready_fixture_ids": ["valid_member_xlsx"],
+  "excluded_case_ids": [],
+  "confirmed_at": "2026-09-14T10:00:00+08:00"
+}

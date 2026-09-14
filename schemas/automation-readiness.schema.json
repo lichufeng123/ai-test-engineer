@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Automation Readiness Plan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_id",
+    "requirement_baseline_id",
+    "feature",
+    "automation_scope",
+    "case_requirements",
+    "account_requirements",
+    "fixture_requirements",
+    "evidence_plan"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_id": {"type": "string", "minLength": 1},
+    "requirement_baseline_id": {"type": "string", "minLength": 1},
+    "feature": {"type": "string", "minLength": 1},
+    "automation_scope": {
+      "type": "object",
+      "required": ["platforms", "environments", "case_ids"],
+      "properties": {
+        "platforms": {"type": "array", "items": {"type": "string"}},
+        "environments": {"type": "array", "items": {"type": "string"}},
+        "business_flow_ids": {"type": "array", "items": {"type": "string"}},
+        "candidate_case_categories": {"type": "array", "items": {"type": "string"}},
+        "case_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "case_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "required_role_ids", "required_fixture_ids", "required_environment_ids"],
+        "properties": {
+          "case_id": {"type": "string"},
+          "required_role_ids": {"type": "array", "items": {"type": "string"}},
+          "required_fixture_ids": {"type": "array", "items": {"type": "string"}},
+          "required_environment_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "account_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role_id", "purpose", "status"],
+        "properties": {
+          "role_id": {"type": "string"},
+          "purpose": {"type": "string"},
+          "status": {"enum": ["needed", "available", "missing", "not_applicable"]}
+        }
+      }
+    },
+    "fixture_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fixture_id", "purpose", "case_ids", "status"],
+        "properties": {
+          "fixture_id": {"type": "string"},
+          "purpose": {"type": "string"},
+          "source_or_factory": {"type": "string"},
+          "case_ids": {"type": "array", "items": {"type": "string"}},
+          "status": {"enum": ["needed", "available", "missing", "not_applicable"]}
+        }
+      }
+    },
+    "evidence_plan": {"type": "object"},
+    "manual_only_case_ids": {"type": "array", "items": {"type": "string"}},
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "status": {"enum": ["planned"]},
+    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "password": {"not": {}},
+    "token": {"not": {}},
+    "cookie": {"not": {}},
+    "credentials": {"not": {}}
+  }
+}

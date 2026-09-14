@@ -10,6 +10,7 @@ from .case_quality import check_case_granularity
 from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
+from .execution_readiness import build_readiness_plan, evaluate_execution_readiness
 from .project import initialize_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
 
@@ -20,7 +21,7 @@ def _read(path: str):
 
 def _emit(value) -> int:
     print(json.dumps(value, ensure_ascii=False, indent=2))
-    return 0 if value.get("status") not in {"failed", "repair_required"} else 1
+    return 0 if value.get("status") not in {"failed", "repair_required", "blocked"} else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -81,6 +82,20 @@ def build_parser() -> argparse.ArgumentParser:
     plugin_build = commands.add_parser("plugin-build", help="从跨客户端 Skill 构建 Codex 插件包")
     plugin_build.add_argument("--root", default=".")
     plugin_build.add_argument("--output", required=True)
+
+    readiness_plan = commands.add_parser(
+        "readiness-plan", help="冻结需求审核后的自动化范围、账号角色、数据和证据计划"
+    )
+    readiness_plan.add_argument("--input", required=True)
+    readiness_plan.add_argument("--output", required=True)
+
+    readiness_check = commands.add_parser(
+        "readiness-check", help="执行前复核范围、环境、账号角色和测试数据"
+    )
+    readiness_check.add_argument("--plan", required=True)
+    readiness_check.add_argument("--confirmation", required=True)
+    readiness_check.add_argument("--previous-missing")
+    readiness_check.add_argument("--output", required=True)
 
     return parser
 
@@ -149,6 +164,22 @@ def main(argv=None) -> int:
         )
     if args.command == "plugin-build":
         return _emit(build_portable_plugin(Path(args.root), Path(args.output)))
+    if args.command == "readiness-plan":
+        value = build_readiness_plan(_read(args.input))
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
+    if args.command == "readiness-check":
+        value = evaluate_execution_readiness(
+            _read(args.plan),
+            _read(args.confirmation),
+            previous_missing=_read(args.previous_missing) if args.previous_missing else None,
+        )
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
     return 2
 
 

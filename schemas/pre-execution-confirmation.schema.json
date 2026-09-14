@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pre-execution Confirmation",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_id",
+    "plan_sha256",
+    "target_environment",
+    "scope_confirmed",
+    "environment_confirmed",
+    "account_roles_confirmed",
+    "data_plan_confirmed",
+    "available_role_ids",
+    "ready_fixture_ids",
+    "excluded_case_ids"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plan_id": {"type": "string"},
+    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "target_environment": {"type": "string"},
+    "scope_confirmed": {"type": "boolean"},
+    "environment_confirmed": {"type": "boolean"},
+    "account_roles_confirmed": {"type": "boolean"},
+    "data_plan_confirmed": {"type": "boolean"},
+    "available_role_ids": {"type": "array", "items": {"type": "string"}},
+    "ready_fixture_ids": {"type": "array", "items": {"type": "string"}},
+    "excluded_case_ids": {"type": "array", "items": {"type": "string"}},
+    "confirmed_at": {"type": ["string", "null"]},
+    "password": {"not": {}},
+    "token": {"not": {}},
+    "cookie": {"not": {}},
+    "credentials": {"not": {}}
+  }
+}

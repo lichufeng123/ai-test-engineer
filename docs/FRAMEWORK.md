@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.4.1 -->
+<!-- FRAMEWORK_VERSION: 0.5.0 -->
 
 # AI 测试工程框架完整手册
 
@@ -130,6 +130,21 @@ AI不能只问“是否有关联”。提问前先读取系统导航、实体模
 
 使用 `ai-test case-granularity-check --cases <用例JSON>` 检查规则是否主要依赖端到端用例间接覆盖。默认情况下，具有十条以上规则且存在端到端用例时，仅由端到端用例覆盖的规则比例不得超过 35%；语义审核仍需确认独立用例具有精确起始状态、完整动作、逐步预期、确定证据源和针对性清理。
 
+### 7.2 自动化准备度提前规划
+
+需求说明书审核完成后，不等待正式执行才临时寻找账号和数据。AI根据已审核需求、系统地图、业务拓扑、角色权限和平台关系，生成 `automation_readiness_plan`，至少包含：
+
+- 可自动化范围、人工专属范围、目标环境和平台。
+- 预计覆盖的业务流程和候选用例类别。
+- 所需账号角色及用途；不得记录账号、密码、Cookie或Token。
+- fixture、生成或取得方式、适用环境、关联用例和清理策略。
+- 核心结果截图、核心流程录屏和接口或数据回读计划。
+- 风险动作、排除项和需要产品确认的问题。
+
+需求阶段还没有正式用例ID时先记录候选用例类别。用例审核完成后，把稳定用例ID逐条绑定到角色、fixture、环境和证据点，重新生成计划哈希。执行前再创建 `pre_execution_confirmation`，确认当前功能、版本、环境、用例范围、账号角色、数据和排除项。`readiness-check` 校验计划哈希并输出已就绪、阻塞和排除用例。
+
+缺少角色或fixture只阻塞关联用例。每个缺口用前置指纹登记到 `missing_prerequisites`；相同指纹未变化前，不得通过重新登录、刷新、重复点击或反复运行来碰运气。收到补充数据、账号角色或环境后重新确认，只恢复前置发生变化的用例。完整操作见 [自动化准备度 Playbook](../playbooks/planning-automation-readiness/PLAYBOOK.md)。
+
 ## 8. 测试数据工厂
 
 AI默认自主生成确定性测试数据，包括正常、异常、边界、重复、混合、空文件、损坏文件、数量边界和跨环境唯一名称。生成过程必须产生fixture清单和哈希。
@@ -183,6 +198,7 @@ INTAKE
 SYSTEM_DISCOVERY（按条件）
 FEATURE_DISCOVERY
 REQUIREMENT_FREEZE
+AUTOMATION_READINESS_PLANNING
 CURRENT_VALIDATION
 BUSINESS_TOPOLOGY_ANALYSIS
 BUSINESS_FLOW_REVIEW
@@ -192,6 +208,7 @@ FLOW_COVERAGE_GATE
 DATA_BUILD
 AUTOMATION_HANDOFF
 ASSET_VALIDATION
+PRE_EXECUTION_CONFIRMATION
 EXECUTION_GATE
 TEST_EXECUTION
 ISSUE_TRIAGE

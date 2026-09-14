@@ -4,7 +4,7 @@ description: Use when prototypes, HTML demos, screenshots, rough PRDs, review no
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # 需求说明书生成
@@ -20,6 +20,7 @@ metadata:
 5. 产出原子需求项，覆盖范围、角色、前置、主流程、异常、状态、字段、权限、幂等、并发、失败恢复、数据一致性和非目标范围。
 6. 生成差距审计：来源冲突、缺失参数、未确认候选链路、无法观察的运行态和发布风险。P0未决不得进入正式下游。
 7. 生成唯一审核入口，由产品经理最终审核。审核修改成为新冻结来源，不能直接改机器数据绕过复核。
+8. 需求审核通过后立即梳理自动化准备度：可自动化与人工专属范围、目标环境/平台、账号角色、fixture与生成方式、证据计划、风险动作和待确认项。没有正式用例ID时先记录候选用例类别；用例审核后绑定稳定ID并重新冻结计划哈希。
 
 ## 产物契约
 
@@ -32,7 +33,10 @@ metadata:
 - `requirement_items.json`
 - `requirement_review.html` 或项目指定的审核载体
 - 审核后的 `requirement_spec.md` 与 `review_receipt.json`
+- `automation_readiness_source.json` 与 `automation_readiness_plan.json`
 
 每条需求项包含稳定ID、陈述、来源定位、状态、优先级、适用角色/环境/平台和验收观察点。发布到外部文档系统属于独立写入动作，只有用户已授权且写后回读通过时才标记完成。
 
-审核通过后，把运行ID、需求哈希、审核摘要、稳定需求ID和业务拓扑交给 `generate-business-assertions`；需求审核不能替代规则审核或用例审核。
+准备度计划只记录账号角色和用途，不得记录账号、密码、Cookie或Token。账号和数据缺口应在此阶段提前暴露，并在实际执行前再次确认。
+
+审核通过后，把运行ID、需求哈希、审核摘要、稳定需求ID、业务拓扑和准备度计划交给 `generate-business-assertions`；需求审核不能替代规则审核或用例审核。

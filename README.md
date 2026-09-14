@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.4.1 -->
+<!-- FRAMEWORK_VERSION: 0.5.0 -->
 
 # AI Test Engineer
 
@@ -65,6 +65,21 @@ ai-test flow-check \
 ai-test case-granularity-check \
   --cases ./cases/review-draft.json
 ```
+
+After requirement review, plan the automation scope, required account roles, fixtures, environments, and evidence before case execution details are forgotten. Bind stable case IDs after case approval, then reconfirm the current environment and available prerequisites immediately before execution:
+
+```bash
+ai-test readiness-plan \
+  --input ./runs/latest/automation-readiness-source.json \
+  --output ./runs/latest/automation_readiness_plan.json
+
+ai-test readiness-check \
+  --plan ./runs/latest/automation_readiness_plan.json \
+  --confirmation ./runs/latest/pre_execution_confirmation.json \
+  --output ./runs/latest/execution_readiness_receipt.json
+```
+
+The readiness receipt separates ready cases from cases blocked by missing roles or fixtures. Blocked cases are recorded once and are not retried until their prerequisite fingerprint changes; ready cases continue.
 
 Generate deterministic test fixtures:
 

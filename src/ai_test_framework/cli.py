@@ -13,6 +13,7 @@ from .evidence import check_evidence
 from .execution_readiness import build_readiness_plan, evaluate_execution_readiness
 from .project import initialize_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
+from .video_quality import check_videos
 
 
 def _read(path: str):
@@ -50,6 +51,13 @@ def build_parser() -> argparse.ArgumentParser:
     evidence.add_argument("--manifest", required=True)
     evidence.add_argument("--root", required=True)
     evidence.add_argument("--report")
+
+    video = commands.add_parser("video-check", help="检查视频证据的时长、黑帧和静止区间")
+    video.add_argument("--input", required=True, help="符合 video-check 输入 Schema 的 JSON")
+    video.add_argument("--root", required=True, help="视频相对路径的受限根目录")
+    video.add_argument("--output", required=True, help="写出机器可读的视频质量回执")
+    video.add_argument("--ffprobe", default="ffprobe", help="ffprobe 可执行文件")
+    video.add_argument("--ffmpeg", default="ffmpeg", help="ffmpeg 可执行文件")
 
     data = commands.add_parser("data-generate", help="按声明生成可复用测试数据")
     data.add_argument("--spec", required=True)
@@ -119,6 +127,17 @@ def main(argv=None) -> int:
     if args.command == "evidence-check":
         return _emit(check_evidence(_read(args.manifest), root=Path(args.root),
                                     report_path=Path(args.report) if args.report else None))
+    if args.command == "video-check":
+        value = check_videos(
+            _read(args.input),
+            root=Path(args.root),
+            ffprobe=args.ffprobe,
+            ffmpeg=args.ffmpeg,
+        )
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
     if args.command == "data-generate":
         value = generate_fixtures(_read(args.spec), Path(args.output))
         value["status"] = "generated"

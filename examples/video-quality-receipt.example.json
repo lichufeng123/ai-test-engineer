@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "receipt_type": "video_quality",
+  "run_id": "RUN-DEMO-VIDEO-001",
+  "input_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "status": "repair_required",
+  "scope": {
+    "technical_checks": [
+      "duration",
+      "black_frames",
+      "static_frames"
+    ],
+    "semantic_content_check": "not_performed"
+  },
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "trim_required": 1,
+    "rerecord_required": 0,
+    "blocked": 0
+  },
+  "items": [
+    {
+      "evidence_id": "VE-DEMO-001",
+      "case_id": "TC-DEMO-001",
+      "path": "evidence/TC-DEMO-001-flow.mp4",
+      "step_labels": [
+        "start",
+        "primary-action",
+        "result-readback"
+      ],
+      "status": "repair_required",
+      "disposition": "trim_required",
+      "probe": {
+        "duration_seconds": 75,
+        "width": 1920,
+        "height": 1080,
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "checks": {
+        "duration": {
+          "status": "passed",
+          "actual_seconds": 75,
+          "minimum_seconds": 30,
+          "maximum_seconds": 120
+        },
+        "black_frames": {
+          "status": "passed",
+          "total_seconds": 0,
+          "longest_segment_seconds": 0,
+          "ratio": 0,
+          "segments": [],
+          "thresholds": {}
+        },
+        "static_frames": {
+          "status": "failed",
+          "total_seconds": 18,
+          "longest_segment_seconds": 18,
+          "ratio": 0.24,
+          "segments": [
+            {
+              "start_seconds": 32,
+              "end_seconds": 50,
+              "duration_seconds": 18
+            }
+          ],
+          "thresholds": {
+            "max_total_ratio": 0.25,
+            "max_segment_seconds": 10
+          }
+        }
+      },
+      "issues": [
+        {
+          "code": "static_segment_too_long",
+          "severity": "warning"
+        }
+      ],
+      "recommended_actions": [
+        "trim_static_waiting_segments"
+      ]
+    }
+  ]
+}

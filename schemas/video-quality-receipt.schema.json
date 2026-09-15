@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Video Quality Receipt",
+  "type": "object",
+  "required": ["schema_version", "receipt_type", "run_id", "input_sha256", "status", "scope", "summary", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "receipt_type": {"const": "video_quality"},
+    "run_id": {"type": "string"},
+    "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["passed", "repair_required", "blocked"]},
+    "scope": {
+      "type": "object",
+      "required": ["technical_checks", "semantic_content_check"],
+      "properties": {
+        "technical_checks": {
+          "const": ["duration", "black_frames", "static_frames"]
+        },
+        "semantic_content_check": {"const": "not_performed"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "passed", "trim_required", "rerecord_required", "blocked"],
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "trim_required": {"type": "integer", "minimum": 0},
+        "rerecord_required": {"type": "integer", "minimum": 0},
+        "blocked": {"type": "integer", "minimum": 0}
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "case_id", "path", "step_labels", "status", "disposition", "probe", "checks", "issues", "recommended_actions"],
+        "properties": {
+          "evidence_id": {"type": "string"},
+          "case_id": {"type": "string"},
+          "path": {"type": "string"},
+          "step_labels": {
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": true
+          },
+          "status": {"enum": ["passed", "repair_required", "blocked"]},
+          "disposition": {"enum": ["passed", "trim_required", "rerecord_required", "blocked"]},
+          "probe": {
+            "type": ["object", "null"],
+            "required": ["duration_seconds", "width", "height", "sha256"],
+            "properties": {
+              "duration_seconds": {"type": "number"},
+              "width": {"type": "integer"},
+              "height": {"type": "integer"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
+          "checks": {"type": "object"},
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["code", "severity"],
+              "properties": {
+                "code": {"type": "string"},
+                "severity": {"enum": ["warning", "error"]}
+              }
+            }
+          },
+          "recommended_actions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "errors": {"type": "array"}
+  }
+}

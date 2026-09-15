@@ -4,7 +4,7 @@ description: Use when reviewed requirements, rules, and approved cases must be e
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # 需求驱动的功能测试执行
@@ -40,10 +40,11 @@ ASSET_LOAD → ASSET_VALIDATION → SYSTEM_DISCOVERY（必要时）
 
 状态只使用：通过、失败、阻塞、未执行及项目审核的其他终态。全部断言验证完成才能标记通过；异常先作为候选问题，排除前置、缓存、旧数据、异步、权限、顺序、环境和脚本因素后再定性。
 
-发布报告前后都运行证据检查并修复图片缺失、仅文件名、错误归位和尺寸问题：
+发布报告前后都运行证据检查并修复图片缺失、仅文件名、错误归位和尺寸问题。视频发布前还要运行第一阶段技术质量门禁；`trim_required` 或 `rerecord_required` 不得按合格视频交付，`blocked` 必须先恢复文件或分析工具。该门禁只检查时长、黑帧和静止区间，不代表页面和测试流程语义审核通过：
 
 ```bash
 ai-test evidence-check --manifest <evidence.json> --root <run-dir> --report <report.md>
+ai-test video-check --input <video-check.json> --root <run-dir> --output <video-receipt.json>
 ```
 
 结束时调用 `test-execution-asset-retrospective`，更新执行资产、报告和回执。

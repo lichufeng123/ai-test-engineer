@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.5.0 -->
+<!-- FRAMEWORK_VERSION: 0.6.0 -->
 
 # AI Test Engineer
 
@@ -108,6 +108,17 @@ ai-test evidence-check \
   --root ./runs/2026-09-12 \
   --report ./runs/2026-09-12/report.md
 ```
+
+视频证据在发布前还要通过第一阶段技术质量门禁。每段视频在脱敏输入 JSON 中声明预期时长和可选阈值；命令使用 `ffprobe`、`ffmpeg` 检查时长、黑帧和静止区间，并写出机器可读回执：
+
+```bash
+ai-test video-check \
+  --input templates/video-check-input.example.json \
+  --root ./runs/2026-09-12 \
+  --output ./runs/2026-09-12/video_quality_receipt.json
+```
+
+回执逐段输出 `passed`、`trim_required`、`rerecord_required` 或 `blocked`，并保留命中的时间区间、占比、规则和建议动作。第一阶段不校验录制页面、标题、操作步骤及结果是否与用例语义一致，仍需进行内容审核；视频也不能替代关键结果截图。`video-check` 是可选核心工具，运行环境需提供 `ffprobe` 和 `ffmpeg`，也可通过 `--ffprobe`、`--ffmpeg` 指定路径。
 
 ## 完整工作方式
 

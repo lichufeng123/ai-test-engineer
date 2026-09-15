@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.5.0 -->
+<!-- FRAMEWORK_VERSION: 0.6.0 -->
 
 # AI Test Engineer
 
@@ -97,6 +97,17 @@ ai-test evidence-check \
   --root ./runs/2026-09-12 \
   --report ./runs/2026-09-12/report.md
 ```
+
+Before publishing video evidence, run the phase-one technical quality gate. Each video declares its expected duration and optional thresholds in a sanitized input JSON. The command uses `ffprobe` and `ffmpeg` to detect duration violations, black segments, and static intervals, then writes a machine-readable receipt:
+
+```bash
+ai-test video-check \
+  --input templates/video-check-input.example.json \
+  --root ./runs/2026-09-12 \
+  --output ./runs/2026-09-12/video_quality_receipt.json
+```
+
+The receipt classifies each item as `passed`, `trim_required`, `rerecord_required`, or `blocked` and reports exact intervals and ratios. Phase one does not verify that recorded screens, titles, steps, or outcomes semantically match the test case; those still require content review. Video never replaces required result screenshots. `video-check` is optional core tooling and requires `ffprobe` and `ffmpeg` on `PATH` (or explicit `--ffprobe` and `--ffmpeg` paths).
 
 Read the [framework handbook](docs/FRAMEWORK.md) for the complete workflow and the [playbooks](playbooks/README.md) for operational guidance.
 

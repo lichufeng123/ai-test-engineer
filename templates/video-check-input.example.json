@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "run_id": "RUN-DEMO-VIDEO-001",
+  "defaults": {
+    "black_frames": {
+      "max_total_ratio": 0.05,
+      "max_segment_seconds": 2,
+      "rerecord_ratio": 0.5
+    },
+    "static_frames": {
+      "max_total_ratio": 0.25,
+      "max_segment_seconds": 10,
+      "rerecord_ratio": 0.8
+    }
+  },
+  "videos": [
+    {
+      "evidence_id": "VE-DEMO-001",
+      "case_id": "TC-DEMO-001",
+      "path": "evidence/TC-DEMO-001-flow.mp4",
+      "expected_duration_seconds": {
+        "minimum": 30,
+        "maximum": 120
+      },
+      "step_labels": [
+        "start",
+        "primary-action",
+        "result-readback"
+      ]
+    }
+  ]
+}

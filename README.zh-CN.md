@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.6.0 -->
+<!-- FRAMEWORK_VERSION: 0.7.0 -->
 
 # AI Test Engineer
 
@@ -72,6 +72,10 @@ ai-test flow-check \
 ai-test case-granularity-check \
   --cases ./cases/review-draft.json
 ```
+
+## 权限测试设计
+
+涉及权限开关时，现有 Skill 自动加载[权限测试设计规范](.agents/skills/test-case-generate/references/permission-testing.md)。区分上级功能资格、角色权限、门店/组织范围和访问视角，覆盖浏览/编辑联动、授权撤权、生效动作、跳转绕过和服务端鉴权。使用 `ai-test permission-check --matrix rules/permission_matrix.json --cases cases/review-draft.json --output runs/latest/permission_design_receipt.json` 保存设计检查回执。该门禁只验证已声明矩阵的设计覆盖，不能证明业务预期正确或实际测试通过。
 
 ## 自动化准备度规划与执行前复核
 

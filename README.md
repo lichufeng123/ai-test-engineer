@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.6.0 -->
+<!-- FRAMEWORK_VERSION: 0.7.0 -->
 
 # AI Test Engineer
 
@@ -110,6 +110,10 @@ ai-test video-check \
 The receipt classifies each item as `passed`, `trim_required`, `rerecord_required`, or `blocked` and reports exact intervals and ratios. Phase one does not verify that recorded screens, titles, steps, or outcomes semantically match the test case; those still require content review. Video never replaces required result screenshots. `video-check` is optional core tooling and requires `ffprobe` and `ffmpeg` on `PATH` (or explicit `--ffprobe` and `--ffmpeg` paths).
 
 Read the [framework handbook](docs/FRAMEWORK.md) for the complete workflow and the [playbooks](playbooks/README.md) for operational guidance.
+
+## Permission test design
+
+Permission-controlled features automatically load the permission design reference in the existing skills. Separate upstream eligibility, role permissions, organization scope and access surfaces; verify browse/edit combinations, activation, revocation, navigation bypasses and server authorization. Run `ai-test permission-check --matrix rules/permission_matrix.json --cases cases/review-draft.json --output runs/latest/permission_design_receipt.json`. This validates declared design coverage only, not business correctness or executed results. See [permission design](.agents/skills/test-case-generate/references/permission-testing.md).
 
 ## Project layout
 

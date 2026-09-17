@@ -24,6 +24,8 @@ metadata:
 
 ## 产物契约
 
+涉及权限时读取 [权限测试设计规范](../test-case-generate/references/permission-testing.md)，记录配置层、配置对象、角色、访问视角、组织范围、浏览/编辑及其他操作、生效动作和来源。角色测试所需上级资格是前置条件，不误判为重复场景；未知权限依赖仅形成定向待确认项。
+
 保存在 `.ai-test/requirements/<run-id>/`：
 
 - `source_manifest.json`

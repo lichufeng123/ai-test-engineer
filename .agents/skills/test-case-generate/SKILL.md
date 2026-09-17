@@ -4,7 +4,7 @@ description: Use when approved requirements and business rules must become revie
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.5.0"
+  version: "0.7.0"
 ---
 
 # 测试用例生成与反哺
@@ -18,6 +18,8 @@ metadata:
 3. 规则审核、P0问题、冲突或当前基线校验未完成时，不生成可执行的正式版本。
 
 ## 用例设计
+
+含权限开关、角色或数据范围时，必须先读取 [权限测试设计规范](references/permission-testing.md)。先隔离配置层与访问视角，再生成权限矩阵和用例；浏览/编辑联动、授权范围、生效动作、撤权、跳转及接口绕过不能只靠通用角色标签覆盖。运行 `ai-test permission-check` 保存设计覆盖回执，随后执行独立语义复核；未决契约不得变成正式预期。
 
 每条用例包含稳定ID、标题、前置、数据、步骤、逐步预期、优先级、环境/平台/角色、`covered_rule_ids`、`covered_flow_ids`、证据计划和清理策略。
 

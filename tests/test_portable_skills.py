@@ -25,7 +25,31 @@ SKILL_NAMES = {
     "test-case-generate",
     "requirement-grounded-functional-testing",
     "test-execution-asset-retrospective",
+    "test-omission-risk-retrospective",
 }
+
+
+class OmissionRiskWorkflowContractTest(unittest.TestCase):
+    def test_case_generation_and_retrospective_share_one_risk_contract(self):
+        case_skill = (ROOT / ".agents/skills/test-case-generate/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        workflow_skill = (ROOT / ".agents/skills/ai-test-workflow/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        execution_skill = (
+            ROOT / ".agents/skills/requirement-grounded-functional-testing/SKILL.md"
+        ).read_text(encoding="utf-8")
+        retrospective = (
+            ROOT / ".agents/skills/test-omission-risk-retrospective/SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("omission_risk_audit.json", case_skill)
+        self.assertIn("OMISSION_RISK_RETROSPECTIVE", workflow_skill)
+        self.assertIn("OMISSION_RISK_RETROSPECTIVE", execution_skill)
+        self.assertIn("测试遗漏风险规则库", retrospective)
+        self.assertIn("用户纠正", retrospective)
+        self.assertIn("测试误判", retrospective)
 
 
 class PortableSkillLayoutTest(unittest.TestCase):

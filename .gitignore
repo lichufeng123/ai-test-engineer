@@ -10,5 +10,7 @@ dist/
 runs/
 assets/
 fixtures/generated/
+AUTOMATION_EXECUTION_HISTORY.md
+outputs
 *.log
 .DS_Store

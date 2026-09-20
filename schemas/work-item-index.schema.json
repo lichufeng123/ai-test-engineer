@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-test/work-item-index.schema.json",
+  "title": "AI Test Requirement Work Item Index",
+  "type": "object",
+  "required": ["schema_version", "updated_at", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "updated_at": {"type": "string"},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement_id", "title", "feature", "status", "stage", "path"],
+        "properties": {
+          "requirement_id": {"type": "string"},
+          "title": {"type": "string"},
+          "feature": {"type": "string"},
+          "status": {"type": "string"},
+          "stage": {"type": "string"},
+          "environments": {"type": "array", "items": {"type": "string"}},
+          "platforms": {"type": "array", "items": {"type": "string"}},
+          "updated_at": {"type": "string"},
+          "path": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

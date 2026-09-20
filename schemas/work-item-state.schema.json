@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-test/work-item-state.schema.json",
+  "title": "AI Test Requirement Work Item State",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "requirement_id",
+    "status",
+    "stage",
+    "summary",
+    "completed",
+    "blockers",
+    "next_steps",
+    "owner",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "requirement_id": {"type": "string"},
+    "status": {"enum": ["planned", "active", "blocked", "complete", "cancelled"]},
+    "stage": {"type": "string"},
+    "allowed_stages": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "summary": {"type": "string"},
+    "completed": {"type": "array", "items": {"type": "string"}},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "next_steps": {"type": "array", "items": {"type": "string"}},
+    "active_run": {"type": ["string", "null"]},
+    "owner": {"type": "string"},
+    "updated_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

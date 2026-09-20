@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.7.0 -->
+<!-- FRAMEWORK_VERSION: 0.9.0 -->
 
 # AI Test Engineer
 
@@ -37,6 +37,20 @@ ai-test init ./my-test-project \
   --environment test \
   --platform web
 ```
+
+### 一需求一任务
+
+测试项目默认按需求隔离状态。第一次开始新需求时创建工作项：
+
+```bash
+ai-test work-item-create --root ./my-test-project \
+  --requirement-id REQ-XXX --title "需求标题" --feature "被测功能" \
+  --environment sit --platform web --scope "本轮测试范围"
+```
+
+之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供全部需求的人类可读总览。
+
+完整说明见[一需求一任务使用说明](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)，普通使用者无需背诵工作流和长提示词。
 
 首次接入且没有系统资产时，先生成系统探索计划：
 
@@ -94,6 +108,26 @@ ai-test readiness-check \
 
 实际执行前重新确认功能、环境、适用用例、账号角色、fixture和排除项。缺账号或数据只阻塞受影响用例并登记一次；相同前置指纹未变化前不重复尝试，其他已就绪用例继续执行。
 
+## 自动化执行历史
+
+每次自动化执行都要登记开始和结束。开始记录保存稳定自动化ID、本次运行ID、环境、平台、执行作用、目的、范围和用例基线；结束记录补齐耗时、结果、报告、证据与资产变化。项目根目录固定生成 `AUTOMATION_EXECUTION_HISTORY.md`，其中首次执行时间保持不变，后续每次回归均追加记录。
+
+```bash
+ai-test execution-log-start \
+  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
+  --feature "智能耳机 Web" --environment sit --platform web \
+  --purpose "发布前回归门禁" --objective "确认核心流程可进入下一环境" \
+  --scope "搜索、筛选、分页和页面跳转" --baseline "approved-cases@sha256:..."
+
+ai-test execution-log-finish \
+  --root . --run-id RUN-20260920-001 --status passed \
+  --summary "纳入范围全部通过" --report reports/sit.md \
+  --evidence runs/RUN-20260920-001/evidence-manifest.json \
+  --asset-change "更新新版入口定位"
+```
+
+命令默认使用当前本地时间，也可传入带时区的ISO-8601时间。机器状态保存在 `.ai-test/execution_history.json`，不得写入账号、密码、Cookie、Token或客户隐私数据。
+
 ## 测试数据与证据
 
 框架可以按声明生成确定性的正常、异常、边界、重复、混合、空文件、损坏文件和数量边界数据，并记录清单与哈希：
@@ -137,11 +171,16 @@ ai-test video-check \
 → 原子断言和正式用例设计
 → 数据与自动化交接
 → 执行前范围、环境、账号角色和数据复核
+→ 执行日志开始登记
 → 资产校验和测试执行
 → 问题定性与回归
+→ 测试遗漏风险复盘
 → 证据化报告
 → 执行资产及知识反哺
+→ 执行日志结束登记
 ```
+
+缺陷暴露的漏测、用户纠正和测试误判统一沉淀到《测试遗漏风险规则库》。后续每次正式用例生成都要检索这份 current 文档并生成 `omission_risk_audit.json`；适用规则必须映射到用例，或记录有依据的不适用、阻塞或待审。风险规则用于提醒设计维度，不能替代已审核业务预期。
 
 首次执行负责学习并沉淀；后续回归先加载资产，只校验入口、关键控件、数据前置和版本差异。单个 UI 操作超过两分钟没有页面、接口、下载、日志或状态进展时，应保存已有证据并报告卡点。
 
@@ -173,3 +212,9 @@ ai-test docs-check --root .
 ## 许可证
 
 MIT，详见 [LICENSE](LICENSE)。
+
+## 列表查询一致性用例设计
+
+涉及列表、搜索、筛选、分页和写入后回读时，生成用例须检查漏记录、重复、错误匹配、全分页完整性以及新增或关联后可查询性；对齐角色、组织、日期和状态，并按已确认需求判断适用项。审核明确覆盖、不适用或缺数据。详见[列表设计检查](.agents/skills/test-case-generate/references/list-result-consistency.md)。失败章节直接附实际截图及必要对照。
+
+修改数据后，除列表/详情回显外，还要核对新条件搜索和筛选命中、旧条件结果以及关联对象身份与名称一致；将这些步骤前置为业务流程规则和独立断言，不等执行才补充。旧条件排除和同步时机依审核需求，不强制特定数据库实现。

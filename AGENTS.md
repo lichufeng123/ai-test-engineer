@@ -14,6 +14,8 @@ Before rule or case generation, classify the feature topology as isolated, linke
 
 Model confirmed behavior with stable `BF-*` business-flow IDs and atomic `A-*` assertion IDs. Every flow step references its assertions. Every confirmed flow requires a complete end-to-end case that declares both `covered_flow_ids` and `covered_rule_ids`. Run `ai-test flow-check` before accepting the baseline.
 
-Use `.ai-test/workflow_state.json` and run receipts as the execution state; chat history is context only. Stop a UI step after two minutes with no page, network, download, log, or state progress, save the available evidence, and report the blocker.
+Use one task per requirement. When the user says `接手需求 <ID>`, run `ai-test work-item-show --root . --requirement-id <ID>` and read every path in `read_first` before proposing or executing work. Use `.ai-test/work-items/<requirement-id>/workflow-state.json` and run receipts as the execution state; chat history is context only. Never write a new requirement into another requirement's state. Stop a UI step after two minutes with no page, network, download, log, or state progress, save the available evidence, and report the blocker.
+
+Before the first action of every automation run, call `ai-test execution-log-start` with the stable automation ID, unique run ID, environment, platform, purpose, objective, scope, and approved baseline. After reporting and asset feedback, call `ai-test execution-log-finish`. Keep `AUTOMATION_EXECUTION_HISTORY.md` as the fixed human-readable history and preserve interrupted or blocked runs instead of dropping them.
 
 Never place passwords, tokens, cookies, keys, personal data, customer data, or private endpoints in project assets or reports. Confirm authorization before destructive production actions, bulk writes, real notifications, or other irreversible operations.

@@ -4,7 +4,7 @@ description: Use when reviewed requirements and current business knowledge must 
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # 生成业务流程与原子断言
@@ -26,11 +26,17 @@ metadata:
 5. 更新当前基线时标记 `ADD/MODIFY/REMOVE/UNCHANGED`；修改保留稳定ID和旧值，删除保留审核记录，不能从“本次没提到”推断删除。
 6. 来源冲突、关键参数缺失和候选关系保留为待确认项，不自行选边。
 
+涉及新增、编辑、导入、关联/取消关联、改派或状态修改，且结果被列表查询消费时，加载 [写入后搜索与筛选生效规则](../test-case-generate/references/list-result-consistency.md)。在适用 `BF-*` 中纳入写入、回显、新条件查询/筛选、旧条件结果及持久化回读，并拆出对应 `A-*`；回显正确不能替代搜索可达和筛选归属正确。关联后验证对象身份与可查询属性一致，不强制具体存储实现。
+
 ## 审核与门禁
 
 涉及权限时读取 [权限测试设计规范](../test-case-generate/references/permission-testing.md)，同时建模授权流程 `BF-*` 和权限原子断言 `A-*`。区分上级资格、角色动作和组织范围；浏览与编辑依赖及生效时机必须有来源，不把系统特例升级为通用业务事实。
 
 审核入口先展示业务流程，再展示原子断言、来源、变更、冲突和覆盖审计。产品经理对流程和规则分别做最终审核。
+
+依赖人审不能只展示英文模块编码或 `covered/current_fact` 等机器状态。每个必查业务域必须展示中文业务域名称、具体职责、关联 `BF-*` 业务流程、判断依据、本轮影响、覆盖状态和优先级；英文编码只作为辅助标识。
+
+完整闭环必须在生成时根据已审核需求自动填充 `impact_audit.target_scope` 的中文主需求和主模块。审核页要提供可编辑的主需求输入框、候选主模块多选和自定义模块输入，不能只提示“未填写”却不给填写入口；结构校验必须拒绝空主需求或空主模块。
 
 审核后保存：
 

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+from datetime import datetime
 from pathlib import Path
 
 from .data_factory import generate_fixtures
@@ -12,9 +13,11 @@ from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
 from .execution_readiness import build_readiness_plan, evaluate_execution_readiness
-from .project import initialize_project
+from .execution_history import finish_execution, start_execution
+from .project import STAGES, initialize_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
 from .video_quality import check_videos
+from .work_items import create_work_item, list_work_items, show_work_item, update_work_item
 
 
 def _read(path: str):
@@ -36,6 +39,38 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--system-id", required=True)
     init.add_argument("--environment", action="append", default=[])
     init.add_argument("--platform", action="append", choices=["web", "app", "h5", "miniapp"], default=[])
+
+    work_create = commands.add_parser("work-item-create", help="为一个测试需求创建独立状态与接手包")
+    work_create.add_argument("--root", default=".")
+    work_create.add_argument("--requirement-id", required=True)
+    work_create.add_argument("--title", required=True)
+    work_create.add_argument("--feature", required=True)
+    work_create.add_argument("--environment", action="append", required=True, dest="environments")
+    work_create.add_argument(
+        "--platform", action="append", required=True, choices=["web", "app", "h5", "miniapp"], dest="platforms"
+    )
+    work_create.add_argument("--scope", required=True)
+
+    work_show = commands.add_parser("work-item-show", help="读取一个需求并给出新任务接手上下文")
+    work_show.add_argument("--root", default=".")
+    work_show.add_argument("--requirement-id", required=True)
+
+    work_list = commands.add_parser("work-item-list", help="列出全部测试需求及当前阶段")
+    work_list.add_argument("--root", default=".")
+
+    work_update = commands.add_parser("work-item-update", help="更新需求阶段、进展、阻塞和下一步")
+    work_update.add_argument("--root", default=".")
+    work_update.add_argument("--requirement-id", required=True)
+    work_update.add_argument("--stage", choices=STAGES)
+    work_update.add_argument("--status", choices=["planned", "active", "blocked", "complete", "cancelled"])
+    work_update.add_argument("--summary")
+    work_update.add_argument("--completed", action="append")
+    work_update.add_argument("--blocker", action="append", dest="blockers")
+    work_update.add_argument("--next-step", action="append", dest="next_steps")
+    work_update.add_argument("--owner")
+    work_update.add_argument("--baseline-id")
+    work_update.add_argument("--baseline-path")
+    work_update.add_argument("--baseline-sha256")
 
     discovery = commands.add_parser("discovery-plan", help="判断是否需要全局或增量探索")
     discovery.add_argument("--project", required=True)
@@ -111,6 +146,37 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_check.add_argument("--previous-missing")
     readiness_check.add_argument("--output", required=True)
 
+    execution_start = commands.add_parser(
+        "execution-log-start", help="自动化开始前登记执行时间、作用、目的和范围"
+    )
+    execution_start.add_argument("--root", default=".")
+    execution_start.add_argument("--automation-id", required=True)
+    execution_start.add_argument("--run-id", required=True)
+    execution_start.add_argument("--feature", required=True)
+    execution_start.add_argument("--environment", required=True)
+    execution_start.add_argument("--platform", action="append", required=True, dest="platforms")
+    execution_start.add_argument("--purpose", required=True, help="本次执行的作用，如发布门禁或缺陷复测")
+    execution_start.add_argument("--objective", required=True, help="本次执行要证明的目标")
+    execution_start.add_argument("--scope", required=True, help="本次纳入和排除的测试范围")
+    execution_start.add_argument("--baseline", help="已审核用例基线及内容哈希")
+    execution_start.add_argument("--started-at", help="带时区的 ISO-8601 时间；默认当前本地时间")
+
+    execution_finish = commands.add_parser(
+        "execution-log-finish", help="自动化结束后登记耗时、结果、报告、证据和资产变化"
+    )
+    execution_finish.add_argument("--root", default=".")
+    execution_finish.add_argument("--run-id", required=True)
+    execution_finish.add_argument(
+        "--status",
+        required=True,
+        choices=["passed", "partial", "failed", "blocked", "interrupted"],
+    )
+    execution_finish.add_argument("--summary", required=True)
+    execution_finish.add_argument("--finished-at", help="带时区的 ISO-8601 时间；默认当前本地时间")
+    execution_finish.add_argument("--report")
+    execution_finish.add_argument("--evidence")
+    execution_finish.add_argument("--asset-change", action="append", default=[], dest="asset_changes")
+
     return parser
 
 
@@ -119,6 +185,24 @@ def main(argv=None) -> int:
     if args.command == "init":
         return _emit(initialize_project(Path(args.path), name=args.name, system_id=args.system_id,
                                         environments=args.environment, platforms=args.platform))
+    if args.command == "work-item-create":
+        return _emit(create_work_item(
+            Path(args.root), requirement_id=args.requirement_id, title=args.title,
+            feature=args.feature, environments=args.environments, platforms=args.platforms,
+            scope=args.scope,
+        ))
+    if args.command == "work-item-show":
+        return _emit(show_work_item(Path(args.root), args.requirement_id))
+    if args.command == "work-item-list":
+        return _emit(list_work_items(Path(args.root)))
+    if args.command == "work-item-update":
+        return _emit(update_work_item(
+            Path(args.root), requirement_id=args.requirement_id, stage=args.stage,
+            status=args.status, summary=args.summary, completed=args.completed,
+            blockers=args.blockers, next_steps=args.next_steps, owner=args.owner,
+            baseline_id=args.baseline_id, baseline_path=args.baseline_path,
+            baseline_sha256=args.baseline_sha256,
+        ))
     if args.command == "discovery-plan":
         value = plan_discovery(project=_read(args.project),
                                asset_register=_read(args.assets) if args.assets else None,
@@ -213,6 +297,36 @@ def main(argv=None) -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return _emit(value)
+    if args.command == "execution-log-start":
+        return _emit(
+            start_execution(
+                Path(args.root),
+                automation_id=args.automation_id,
+                run_id=args.run_id,
+                feature=args.feature,
+                environment=args.environment,
+                platforms=args.platforms,
+                purpose=args.purpose,
+                objective=args.objective,
+                scope=args.scope,
+                baseline=args.baseline,
+                started_at=args.started_at or datetime.now().astimezone().isoformat(timespec="seconds"),
+            )
+        )
+    if args.command == "execution-log-finish":
+        return _emit(
+            finish_execution(
+                Path(args.root),
+                run_id=args.run_id,
+                result_status=args.status,
+                summary=args.summary,
+                finished_at=args.finished_at
+                or datetime.now().astimezone().isoformat(timespec="seconds"),
+                report=args.report,
+                evidence=args.evidence,
+                asset_changes=args.asset_changes,
+            )
+        )
     return 2
 
 

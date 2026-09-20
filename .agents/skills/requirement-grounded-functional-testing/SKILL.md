@@ -4,7 +4,7 @@ description: Use when reviewed requirements, rules, and approved cases must be e
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.6.0"
+  version: "0.8.0"
 ---
 
 # 需求驱动的功能测试执行
@@ -17,8 +17,9 @@ metadata:
 
 ```text
 ASSET_LOAD → ASSET_VALIDATION → SYSTEM_DISCOVERY（必要时）
-→ PRE_EXECUTION_CONFIRMATION → EXECUTION_GATE → TEST_EXECUTION → ISSUE_TRIAGE
-→ RESULT_WRITEBACK → REPORT_REPAIR → ASSET_FEEDBACK → COMPLETE
+→ PRE_EXECUTION_CONFIRMATION → EXECUTION_GATE → EXECUTION_LOG_START → TEST_EXECUTION → ISSUE_TRIAGE
+→ OMISSION_RISK_RETROSPECTIVE → RESULT_WRITEBACK → REPORT_REPAIR → ASSET_FEEDBACK
+→ EXECUTION_LOG_FINISH → COMPLETE
 ```
 
 开始写操作前必须具备：已审核需求与规则、唯一正式用例基线及哈希、角色/权限、入口、状态机、缓存与持久化、异步窗口、数据方案、范围外事项、风险动作和证据计划。执行前必须对照需求阶段的 `automation_readiness_plan`，重新确认功能、目标环境、适用用例范围、账号角色、fixture和排除项，并生成引用计划哈希的 `pre_execution_confirmation` 与准备度回执。缺失项明确标为阻塞，不能边操作边把猜测当预期。
@@ -35,6 +36,8 @@ ASSET_LOAD → ASSET_VALIDATION → SYSTEM_DISCOVERY（必要时）
 - 发生页面或接口错误时，保存脱敏请求、响应、时间、用例ID和可复现cURL到运行目录的 `errors/`；敏感请求头和凭据必须移除。
 - 生产写入、删除、金额、库存、真实通知和批量数据按项目授权边界执行。
 - 某条用例缺少账号角色、前置状态或测试数据时，只将该用例标为阻塞并登记一次 `missing_prerequisites.json`，随后继续执行其他已就绪用例。相同前置指纹未变化前不得反复登录、刷新、点击或重跑；收到补充数据或角色后只恢复受影响用例。
+- 首个自动化动作前运行 `ai-test execution-log-start`，登记稳定自动化ID、唯一运行ID、环境、平台、执行作用、目的、范围和已审核用例基线。不得等测试结束后补猜开始时间。
+- 报告、证据和资产反哺完成后运行 `ai-test execution-log-finish`；通过、部分通过、失败、阻塞和中断均须收口。项目根目录 `AUTOMATION_EXECUTION_HISTORY.md` 是固定人工查看入口，`.ai-test/execution_history.json` 为机器状态。
 
 ## 证据与结论
 
@@ -49,4 +52,4 @@ ai-test evidence-check --manifest <evidence.json> --root <run-dir> --report <rep
 ai-test video-check --input <video-check.json> --root <run-dir> --output <video-receipt.json>
 ```
 
-结束时调用 `test-execution-asset-retrospective`，更新执行资产、报告和回执。
+问题定性与缺陷回归后先调用 `test-omission-risk-retrospective`，区分实际缺陷、漏测、用户纠正、测试误判和待确认现象；再调用 `test-execution-asset-retrospective` 更新导航、定位、fixture、恢复方式等执行资产，最后更新报告和回执。

@@ -1,9 +1,10 @@
 """Project initialization and shared workflow state."""
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Dict, Any
+
+from .execution_history import initialize_execution_history
 
 
 STAGES = [
@@ -20,11 +21,13 @@ STAGES = [
     "ASSET_VALIDATION",
     "PRE_EXECUTION_CONFIRMATION",
     "EXECUTION_GATE",
+    "EXECUTION_LOG_START",
     "TEST_EXECUTION",
     "ISSUE_TRIAGE",
     "RESULT_WRITEBACK",
     "REPORT_REPAIR",
     "ASSET_FEEDBACK",
+    "EXECUTION_LOG_FINISH",
     "COMPLETE",
 ]
 
@@ -67,14 +70,9 @@ def initialize_project(
         },
         "secrets": {"policy": "runtime-reference-only"},
     }
-    state = {
-        "schema_version": 1,
-        "stage": "INTAKE",
-        "allowed_stages": STAGES,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "blockers": [],
-        "active_run": None,
-    }
     _write_json(root / "ai-test.json", config)
-    _write_json(root / ".ai-test/workflow_state.json", state)
-    return {"status": "created", "root": str(root), "config": config, "state": state}
+    from .work_items import initialize_work_item_index
+
+    index = initialize_work_item_index(root)
+    initialize_execution_history(root)
+    return {"status": "created", "root": str(root), "config": config, "work_items": index}

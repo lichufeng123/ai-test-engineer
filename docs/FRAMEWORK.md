@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.7.0 -->
+<!-- FRAMEWORK_VERSION: 0.9.0 -->
 
 # AI 测试工程框架完整手册
 
@@ -153,6 +153,14 @@ AI不能只问“是否有关联”。提问前先读取系统导航、实体模
 
 缺少角色或fixture只阻塞关联用例。每个缺口用前置指纹登记到 `missing_prerequisites`；相同指纹未变化前，不得通过重新登录、刷新、重复点击或反复运行来碰运气。收到补充数据、账号角色或环境后重新确认，只恢复前置发生变化的用例。完整操作见 [自动化准备度 Playbook](../playbooks/planning-automation-readiness/PLAYBOOK.md)。
 
+### 7.4 列表结果完整性与一致性
+
+列表、搜索、筛选、分页与写入后列表回读用例必须加载[列表一致性设计检查](../.agents/skills/test-case-generate/references/list-result-consistency.md)。对齐组织、角色权限、日期、状态与匹配规则，用运行时预期记录集合检查漏记录、重复、错误混入、全分页完整性及新增/编辑/导入/关联后的可查询性。HTTP200或非空结果不足以证明业务正确，同一个接口与UI一致也不能代替独立业务预期。
+
+用例审核逐项记录已覆盖、不适用依据或具体缺数据；这是设计与语义复核清单，不宣称新增了机器覆盖门禁。缺陷章节直接附实际结果与必要对照截图，保留快照时间及ID差异。执行中新增的派生检查需反哺同一正式用例基线，不能静默改已审核预期。
+
+写入后规则不仅验证回显：新增、编辑、导入、关联、改派、取消关联或状态修改后，应按受影响的新旧查询条件与筛选属性验证记录纳入/排除、身份及关键属性一致、持久化和适用组合。业务规则阶段即把这些步骤纳入 `BF-*`，拆分对应 `A-*`，再生成独立用例入口。显示可能来自联表或前端补全，不能代替搜索属性同步的证明；不规定数据库实现，未经证据确认的根因不得当作事实。
+
 ## 8. 测试数据工厂
 
 AI默认自主生成确定性测试数据，包括正常、异常、边界、重复、混合、空文件、损坏文件、数量边界和跨环境唯一名称。生成过程必须产生fixture清单和哈希。
@@ -215,6 +223,32 @@ ai-test video-check \
 
 报告前两章固定为“核心功能与业务流程录屏清单”和“产品确认暂不处理问题”。详见 [证据与报告](evidence-and-reporting.md)。
 
+### 11.1 自动化执行历史
+
+每次自动化运行必须使用同一个稳定 `automation_id` 和唯一 `run_id` 留下时间与用途记录。通过执行门禁后、首个UI或接口测试动作前运行：
+
+```bash
+ai-test execution-log-start \
+  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
+  --feature "智能耳机 Web" --environment sit --platform web \
+  --purpose "发布前回归门禁" --objective "确认核心流程可进入下一环境" \
+  --scope "搜索、筛选、分页和页面跳转" --baseline "approved-cases@sha256:..."
+```
+
+报告媒体修复、发布后回读和执行资产反哺完成后运行：
+
+```bash
+ai-test execution-log-finish \
+  --root . --run-id RUN-20260920-001 --status passed \
+  --summary "纳入范围全部通过" --report reports/sit.md \
+  --evidence runs/RUN-20260920-001/evidence-manifest.json \
+  --asset-change "更新新版入口定位"
+```
+
+项目根目录 `AUTOMATION_EXECUTION_HISTORY.md` 是固定人工查看入口，展示每套自动化的首次执行时间、最近执行时间、累计次数以及历次执行的作用、目的、范围、耗时和结果。`.ai-test/execution_history.json` 是防重复和计算用机器状态；同一 `run_id` 重复开始不会增加次数。中断、阻塞和失败也必须收口，不能只记录成功运行。
+
+开始和结束时间默认取当前本地时区，也可显式传入带时区的ISO-8601时间。日志不得包含账号、密码、Cookie、Token、私有接口参数或客户隐私数据。
+
 ## 12. 问题定性
 
 页面异常先记为候选问题。根据需求依据、前置状态、缓存、旧数据、异步任务、权限、操作顺序、复现率、接口、日志和数据回读判断属于：产品缺陷、环境问题、测试数据问题、自动化脚本问题、设计如此、待优化、忽略或证据不足。
@@ -223,7 +257,11 @@ ai-test video-check \
 
 ## 13. 多会话协作
 
-聊天记录不作为运行状态。每个项目使用 `.ai-test/workflow_state.json`、运行目录、交接包、锁和回执保存进度。会话启动时读取状态和资产，结束时写入下一步、阻塞和变更。
+默认一个需求使用一个任务。聊天记录不作为运行状态。用户说“接手需求 REQ-XXX”后，Agent 必须运行 `ai-test work-item-show --root . --requirement-id REQ-XXX`，按返回顺序读取工作项文件，再继续执行。
+
+项目使用 `.ai-test/work-items/index.json` 维护机器索引，使用 `TEST_WORK_ITEMS.md` 提供人类总览。每个需求在 `.ai-test/work-items/<requirement-id>/` 中独立保存 `manifest.json`、`workflow-state.json`、`handoff.json`、`decisions.md` 和 `asset-links.json`。不同需求不得共享一个可写状态文件；同一需求、同一阶段只能有一个写入者。
+
+同一需求跨 SIT、预发布和正式环境时沿用同一工作项，但每个环境保留独立运行记录与报告。新需求、新正式用例基线或需要真正并行的独立目标创建新的工作项。详细使用方式见 [一需求一任务使用说明](ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)。
 
 事实优先级：产品经理最新明确决定、已审核正式基线、当前运行证据、已验证资产、跨工具记忆、历史聊天。详见 [多会话协作](multi-session-coordination.md)。
 
@@ -246,11 +284,14 @@ AUTOMATION_HANDOFF
 ASSET_VALIDATION
 PRE_EXECUTION_CONFIRMATION
 EXECUTION_GATE
+EXECUTION_LOG_START
 TEST_EXECUTION
 ISSUE_TRIAGE
+OMISSION_RISK_RETROSPECTIVE
 RESULT_WRITEBACK
 REPORT_REPAIR
 ASSET_FEEDBACK
+EXECUTION_LOG_FINISH
 COMPLETE
 ```
 
@@ -258,7 +299,9 @@ COMPLETE
 
 ## 15. 资产反哺
 
-业务事实和产品决策进入受控业务知识库；导航、页面、定位、测试数据、环境经验、证据计划和自动化动作进入执行资产。账号、密码、Cookie、Token和一次性敏感数据不进入任何资产。
+业务事实和产品决策进入受控业务知识库；缺陷暴露的漏测、用户纠正和测试误判进入《测试遗漏风险规则库》；导航、页面、定位、测试数据、环境经验、证据计划和自动化动作进入执行资产。风险规则是测试设计经验，不能代替当前已审核业务预期。账号、密码、Cookie、Token和一次性敏感数据不进入任何资产。
+
+每次正式用例生成都要在当前知识检索阶段查询《测试遗漏风险规则库》，产出 `omission_risk_audit.json`。命中项必须映射到独立用例，或以有依据的不适用、阻塞、待审状态处置。对于同时存在连锁和门店范围的搜索、筛选、选择器及关联功能，必须分别评估两个视角；顾客和员工还要按组织归属或关联状态准备可区分的数据。
 
 资产必须记录来源、环境、平台、产品版本、最后验证时间、状态、文件哈希和备份回执。只有本地文件且无版本或备份时，状态为 `local_unbacked`，不能宣称闭环完成。
 

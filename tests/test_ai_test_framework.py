@@ -90,7 +90,7 @@ class DiscoveryPlanningTest(unittest.TestCase):
 
 
 class ProjectInitializationTest(unittest.TestCase):
-    def test_init_creates_shared_state_without_credentials(self):
+    def test_init_creates_project_without_credentials(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             result = initialize_project(
@@ -101,10 +101,10 @@ class ProjectInitializationTest(unittest.TestCase):
                 platforms=["web", "app", "h5"],
             )
             config = json.loads((root / "ai-test.json").read_text(encoding="utf-8"))
-            state = json.loads((root / ".ai-test/workflow_state.json").read_text(encoding="utf-8"))
+            index = json.loads((root / ".ai-test/work-items/index.json").read_text(encoding="utf-8"))
             self.assertEqual(config["case_generation"]["adapter"], "approved-test-case-baseline")
             self.assertNotIn("password", json.dumps(config).lower())
-            self.assertEqual(state["stage"], "INTAKE")
+            self.assertEqual(index["items"], [])
             self.assertTrue((root / "runs").is_dir())
             self.assertEqual(result["status"], "created")
 

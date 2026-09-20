@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.7.0 -->
+<!-- FRAMEWORK_VERSION: 0.9.0 -->
 
 # AI Test Engineer
 
@@ -37,6 +37,18 @@ ai-test init ./my-test-project \
   --environment test \
   --platform web
 ```
+
+### One requirement, one task
+
+Create an isolated work item before starting a new testing requirement:
+
+```bash
+ai-test work-item-create --root ./my-test-project \
+  --requirement-id REQ-XXX --title "Requirement title" --feature "Feature" \
+  --environment sit --platform web --scope "Approved test scope"
+```
+
+In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` is the human-readable project index. See the [Chinese user guide](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md).
 
 For a new system, plan discovery before testing a feature:
 
@@ -81,6 +93,27 @@ ai-test readiness-check \
 
 The readiness receipt separates ready cases from cases blocked by missing roles or fixtures. Blocked cases are recorded once and are not retried until their prerequisite fingerprint changes; ready cases continue.
 
+## Automation execution history
+
+Every automation run is registered before its first test action and closed after reporting and asset feedback. The fixed human-readable ledger is `AUTOMATION_EXECUTION_HISTORY.md`; it preserves the first execution time and every later run with its purpose, objective, scope, duration, outcome, report, evidence, and asset changes.
+
+```bash
+ai-test execution-log-start \
+  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
+  --feature "Smart Earphone Web" --environment sit --platform web \
+  --purpose "release gate" --objective "validate the core workflow" \
+  --scope "search, filters, pagination, and navigation"
+
+ai-test execution-log-finish \
+  --root . --run-id RUN-20260920-001 --status passed \
+  --summary "approved scope passed" --report reports/sit.md \
+  --evidence runs/RUN-20260920-001/evidence-manifest.json
+```
+
+The machine state lives in `.ai-test/execution_history.json`. Never include credentials, cookies, tokens, or customer data in either record.
+
+After issue triage, distill missed scenarios, user corrections, and false positives into the reviewed **Test Omission Risk Rule Library**. Every formal case-generation run retrieves that current document and writes `omission_risk_audit.json`; each applicable hit maps to an independent case or a reviewed not-applicable, blocked, or pending disposition. These rules guide test design and never replace approved product expectations.
+
 Generate deterministic test fixtures:
 
 ```bash
@@ -110,6 +143,10 @@ ai-test video-check \
 The receipt classifies each item as `passed`, `trim_required`, `rerecord_required`, or `blocked` and reports exact intervals and ratios. Phase one does not verify that recorded screens, titles, steps, or outcomes semantically match the test case; those still require content review. Video never replaces required result screenshots. `video-check` is optional core tooling and requires `ffprobe` and `ffmpeg` on `PATH` (or explicit `--ffprobe` and `--ffmpeg` paths).
 
 Read the [framework handbook](docs/FRAMEWORK.md) for the complete workflow and the [playbooks](playbooks/README.md) for operational guidance.
+
+## List result consistency
+
+For list, search, filter, pagination, and post-write readback features, case generation checks result completeness and identity, not merely HTTP success or a nonempty list. Cover missing/duplicate/unexpected records, all-page reconciliation, and visibility after applicable writes under aligned scopes and confirmed matching rules. Review coverage, exclusions, fixtures, and paired failure evidence using the [list result design reference](.agents/skills/test-case-generate/references/list-result-consistency.md). After applicable edits, imports, links, reassignment, unlinking, or status changes, verify both display persistence and search/filter membership under new and prior conditions. Model these steps in business flows and atomic assertions; correct display does not prove searchable attributes were persisted or synchronized. This is a design checklist, not an automated coverage gate.
 
 ## Permission test design
 

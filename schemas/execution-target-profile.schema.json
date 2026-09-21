@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Execution Target Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "target_id",
+    "platform",
+    "target_kind",
+    "executor_id",
+    "required_capabilities",
+    "selection"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "target_id": {"type": "string", "minLength": 1},
+    "platform": {"enum": ["web", "app", "h5", "miniapp", "api", "database"]},
+    "target_kind": {"enum": ["physical", "simulator", "emulator", "browser", "service", "database"]},
+    "executor_id": {"type": "string", "minLength": 1},
+    "os_family": {"type": ["string", "null"]},
+    "required_capabilities": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy"],
+      "properties": {
+        "strategy": {"enum": ["runtime_alias", "environment_reference", "first_compatible"]},
+        "runtime_alias": {"type": ["string", "null"]},
+        "environment_variable": {"type": ["string", "null"]}
+      }
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exclusive": {"type": "boolean"},
+        "stale_after_seconds": {"type": "integer", "minimum": 1}
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}},
+    "password": {"not": {}},
+    "token": {"not": {}},
+    "cookie": {"not": {}},
+    "credentials": {"not": {}},
+    "serial_number": {"not": {}},
+    "udid": {"not": {}}
+  }
+}

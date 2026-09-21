@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.9.0 -->
+<!-- FRAMEWORK_VERSION: 0.11.0 -->
 
 # AI 测试工程框架完整手册
 
@@ -151,7 +151,7 @@ AI不能只问“是否有关联”。提问前先读取系统导航、实体模
 
 需求阶段还没有正式用例ID时先记录候选用例类别。用例审核完成后，把稳定用例ID逐条绑定到角色、fixture、环境和证据点，重新生成计划哈希。执行前再创建 `pre_execution_confirmation`，确认当前功能、版本、环境、用例范围、账号角色、数据和排除项。`readiness-check` 校验计划哈希并输出已就绪、阻塞和排除用例。
 
-缺少角色或fixture只阻塞关联用例。每个缺口用前置指纹登记到 `missing_prerequisites`；相同指纹未变化前，不得通过重新登录、刷新、重复点击或反复运行来碰运气。收到补充数据、账号角色或环境后重新确认，只恢复前置发生变化的用例。完整操作见 [自动化准备度 Playbook](../playbooks/planning-automation-readiness/PLAYBOOK.md)。
+缺少角色或fixture只阻塞关联用例。移动端和硬件在环测试还要声明 `execution_target_requirements`、`hardware_fixture_requirements` 以及逐用例的执行目标和硬件依赖。执行目标只有在指定执行器完成doctor和capabilities校验后才能进入 `available_execution_target_ids`；提前绑定的耳机、工牌或其他外设只有人工准备和自动状态回读同时完成后才能进入 `ready_hardware_fixture_ids`。每个缺口用前置指纹登记到 `missing_prerequisites`；相同指纹未变化前，不得通过重新登录、刷新、重复点击或反复运行来碰运气。收到补充数据、账号角色、环境、执行目标或硬件后重新确认，只恢复前置发生变化的用例。完整操作见 [自动化准备度 Playbook](../playbooks/planning-automation-readiness/PLAYBOOK.md)。
 
 ### 7.4 列表结果完整性与一致性
 
@@ -171,15 +171,23 @@ SIT生成的数据模板可以跨环境复用；数据库ID、Cookie和密码不
 
 ## 9. 自动化执行器
 
-Web以Playwright为稳定回归执行器，Computer Use用于首次探索、复杂系统弹窗、浏览器插件和无法直接驱动的原生文件选择器。坐标点击只作为临时探索证据。
+Web正式回归只使用Playwright Test。新需求默认由Ego Lite完成首轮语义/视觉探索、复用人工登录态并发现稳定Test ID、Role、Label、DOM线索和等待条件；Playwright MCP只按需生成或复核Playwright定位器，不是编写脚本的前置条件，没有安装时可使用Ego Lite语义快照、DOM/CDP、Playwright Inspector/Codegen、浏览器DevTools或现有Test ID完成定位；Chrome DevTools MCP负责网络、Console、性能与浏览器现场诊断；Stagehand只允许提出定位器、等待条件和已知瞬态弹窗修复候选。所有候选必须经过代码审查，并由Playwright执行单用例验证与影响回归。任何AI工具不得修改正式预期、业务规则、权限边界、Case ID或基线哈希，也不能成为正式回归的自由决策回退。
 
-小程序可使用 Minium 覆盖核心业务、异常、权限、幂等和一致性；云真机工具可覆盖兼容性、性能、版本回归和 CI 门禁；随机测试只覆盖崩溃、卡死和页面可达性冒烟。
+项目使用 `templates/web-executor-routing.example.json` 声明工具状态和分工，运行 `ai-test web-executor-check` 保存路由门禁回执。已可用工具必须锁定精确版本；凭据、Cookie、Token、storage state和模型Key只允许运行时安全注入。完整流程见[Web AI浏览器工具栈](web-ai-browser-stack.md)。坐标点击只允许作为探索或临时恢复证据，不进入稳定Playwright脚本。
+
+App通过工具无关的移动执行器契约接入。执行目标由 `execution-target-profile` 描述，业务外设由 `hardware-fixture` 描述，跨App、API、Web步骤由 `cross-platform-run-plan` 编排，每一步输出统一 `execution-step-receipt`。业务动作使用 `mobile.openApp`、`mobile.startRecording` 等语义名称，不把具体CLI或绝对坐标写入正式用例。
+
+首个AI-first适配器为agent-device。交互探索由当前AI Agent通过MCP或CLI执行 `open → snapshot → act → verify`；审核后的稳定步骤固化为`.ad`或Node API并锁定精确版本。无人值守回归不允许模型临时改变业务预期；写操作使用 `none` 或 `verify_before_retry`，不得盲目重试。真机标识、Bundle ID、私有地址和凭据只允许运行时提供。完整约束见 [agent-device Adapter](../adapters/agent-device/README.md)。
+
+同一手机或硬件fixture必须独占租用。设备中断后先保存现场和步骤回执，再判断安全恢复点；App重启不得掩盖已经发生的创建、关联、提交或录音结束。新工具通过新的执行器适配器接入，业务用例、正式基线和跨端动作名称保持不变。
+
+小程序可使用 Minium 覆盖核心业务、异常、权限、幂等和一致性；云真机工具可覆盖兼容性、性能、版本回归和 CI 门禁；随机测试只覆盖崩溃、卡死和页面可达性冒烟。带本地实体外设的链路默认使用本地真机节点，普通云真机不能推定能访问现场硬件。
 
 接口监听、数据库只读回读、日志和curl用于补强UI结论。出现接口报错时，应保存脱敏响应和可复现curl到约定的错误日志目录。
 
 ## 10. 受控自愈
 
-AI可修复定位器、DOM层级、等待条件、已知弹窗、浏览器重新绑定和报告媒体缺失。AI不得修改预期结果、业务规则、权限边界、金额与状态断言，也不得通过删除断言让用例通过。
+AI可修复定位器、DOM层级、等待条件、已知弹窗、浏览器重新绑定和报告媒体缺失。Web定位修复可由Stagehand生成最小候选，但必须保留原失败证据，经过代码审查并由Playwright完成单用例验证和影响回归。AI不得修改预期结果、业务规则、权限边界、金额与状态断言，也不得通过删除断言让用例通过。
 
 单步超过2分钟没有页面、接口、下载、日志或状态进展时立即停止等待，保存证据并报告卡点。
 
@@ -259,7 +267,11 @@ ai-test execution-log-finish \
 
 默认一个需求使用一个任务。聊天记录不作为运行状态。用户说“接手需求 REQ-XXX”后，Agent 必须运行 `ai-test work-item-show --root . --requirement-id REQ-XXX`，按返回顺序读取工作项文件，再继续执行。
 
-项目使用 `.ai-test/work-items/index.json` 维护机器索引，使用 `TEST_WORK_ITEMS.md` 提供人类总览。每个需求在 `.ai-test/work-items/<requirement-id>/` 中独立保存 `manifest.json`、`workflow-state.json`、`handoff.json`、`decisions.md` 和 `asset-links.json`。不同需求不得共享一个可写状态文件；同一需求、同一阶段只能有一个写入者。
+项目使用 `.ai-test/work-items/index.json` 维护机器索引，使用 `TEST_WORK_ITEMS.md` 提供人类总览。每个需求在 `.ai-test/work-items/<requirement-id>/` 中独立保存 `manifest.json`、`workflow-state.json`、`handoff.json`、`decisions.md`、`asset-links.json` 和 `artifacts.json`。`artifacts.json` 把需求ID、运行ID、基线ID、稳定产物ID、类型、路径、SHA-256、审核状态和阶段绑定起来；不同需求不得共享一个可写状态文件，同一需求、同一阶段只能有一个写入者。
+
+任何需求、规则、用例、执行包或报告产物生成后，必须立即运行 `work-item-artifact-register`。登记的有效产物阶段高于当前状态时，工作项自动推进；审核页生成只能推进到等待审核，不能等同于审核通过。切换会话、进入正式用例设计或怀疑状态过期时运行 `work-item-reconcile`，检查文件缺失、哈希变化、状态落后、历史目录中的未登记产物和用例设计门禁，并保存 `reconciliation-receipt.json`。聊天中的完成声明不能替代产物登记与回执。
+
+需求、流程、断言和用例审核可以对当前筛选结果执行带二次确认的批量通过；导出仍须按稳定ID逐项记录决定并允许单项修正。需修改、不适用、待决策、删除、依赖范围和完整性审批保持逐项操作，不能通过批量功能省略理由或跨过门禁。
 
 同一需求跨 SIT、预发布和正式环境时沿用同一工作项，但每个环境保留独立运行记录与报告。新需求、新正式用例基线或需要真正并行的独立目标创建新的工作项。详细使用方式见 [一需求一任务使用说明](ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)。
 
@@ -275,8 +287,9 @@ REQUIREMENT_FREEZE
 AUTOMATION_READINESS_PLANNING
 CURRENT_VALIDATION
 BUSINESS_TOPOLOGY_ANALYSIS
-BUSINESS_FLOW_REVIEW
 ASSERTION_DESIGN
+BUSINESS_ASSERTION_REVIEW
+RULE_CURRENT_SYNC
 CASE_DESIGN
 FLOW_COVERAGE_GATE
 DATA_BUILD
@@ -295,7 +308,7 @@ EXECUTION_LOG_FINISH
 COMPLETE
 ```
 
-`SYSTEM_DISCOVERY`可以按条件跳过，其他阶段如果不适用也必须留下带原因的回执，不能静默消失。
+`SYSTEM_DISCOVERY`可以按条件跳过，其他阶段如果不适用也必须留下带原因的回执，不能静默消失。`ASSERTION_DESIGN` 表示业务拓扑、流程和原子断言已经生成并通过机器校验；审核页生成后进入 `BUSINESS_ASSERTION_REVIEW`；只有人工审核导出通过校验并形成 `rule_review_receipt` 后才能进入 `RULE_CURRENT_SYNC`。进入 `CASE_DESIGN` 前，`work-item-reconcile` 必须确认自动化准备度计划、规则审核回执，以及“规则 Current 已同步”或“本轮明确不适用”的处置回执均已登记且状态有效。
 
 ## 15. 资产反哺
 

@@ -61,12 +61,16 @@ ai-test work-item-create \
 ├── workflow-state.json # 当前阶段、完成项、阻塞、下一步和负责人
 ├── handoff.json        # 新任务快速接手摘要
 ├── decisions.md        # 已确认且影响测试的业务决策
-└── asset-links.json    # 系统、功能、自动化、报告和证据资产引用
+├── asset-links.json    # 系统、功能、自动化、报告和证据资产引用
+├── artifacts.json      # 产物ID、类型、路径、哈希、审核状态和对应阶段
+└── reconciliation-receipt.json # 最近一次状态与产物对账回执（运行对账后生成）
 ```
 
 项目根目录的 `TEST_WORK_ITEMS.md` 是给人看的总览，`.ai-test/work-items/index.json` 是给工具读取的总索引。两者由命令自动更新，不手工维护两份状态。
 
-工作有进展时，Agent 使用 `work-item-update` 更新阶段、完成项、阻塞和下一步。新任务接手时先读这些文件，聊天历史和长期记忆只用于补充背景，不能替代运行状态。
+工作有进展时，Agent 使用 `work-item-update` 更新阶段、完成项、阻塞和下一步。任何需求、规则、用例、执行包或报告产物生成后，还必须使用 `work-item-artifact-register` 登记稳定产物ID、路径、SHA-256、审核状态和对应阶段；登记的阶段高于当前状态时，工作项自动推进。新任务接手时先读这些文件，聊天历史和长期记忆只用于补充背景，不能替代运行状态。
+
+切换会话、准备生成正式用例或发现状态与实际文件不一致时，运行 `work-item-reconcile`。该命令检查文件缺失、哈希变化、状态落后、未登记产物和用例设计门禁，并写出 `reconciliation-receipt.json`。审核页“已生成”只表示进入 `BUSINESS_ASSERTION_REVIEW`；只有审核导出通过校验并登记 `rule_review_receipt`，同时登记规则 Current 已同步或明确不适用的处置回执后，才允许进入 `CASE_DESIGN`。
 
 ## 一个需求一个任务的边界
 
@@ -74,7 +78,7 @@ ai-test work-item-create \
 
 - 同一需求从 SIT 推进到预发布和正式环境。
 - 同一正式用例基线的缺陷修复与复测。
-- 同一功能的 Web 与小程序联动验证。
+- 同一功能新增Web、App、H5、小程序或实体设备联动验证。
 
 应该新开任务：
 
@@ -99,6 +103,23 @@ ai-test work-item-update --root . --requirement-id REQ-XXX \
   --summary "SIT核心流程执行中" \
   --completed "用例审核" \
   --next-step "完成剩余权限场景"
+
+# 同一需求增量扩展到App和新环境，不创建第二个工作项
+ai-test work-item-update --root . --requirement-id REQ-XXX \
+  --add-platform app --add-environment pre \
+  --scope "Web、App、服务端和实体设备联动"
+
+# 业务断言审核页生成后立即登记；阶段自动推进到等待审核
+ai-test work-item-artifact-register --root . --requirement-id REQ-XXX \
+  --artifact-id ART-REQ-XXX-RULE-REVIEW \
+  --artifact-type business_assertion_review_page \
+  --path runs/latest/business_assertions_review.html \
+  --status review_pending --stage BUSINESS_ASSERTION_REVIEW \
+  --baseline-id BL-REQ-XXX-001
+
+# 对账状态、哈希、孤立产物和CASE_DESIGN门禁
+ai-test work-item-reconcile --root . --requirement-id REQ-XXX \
+  --discover-root ../legacy-project/.knowledge_work --apply
 ```
 
 账号、密码、Cookie、Token和真实客户数据不得写入这些文件。账号只记录角色和运行时引用，实际凭据通过本机环境变量或安全凭据管理提供。

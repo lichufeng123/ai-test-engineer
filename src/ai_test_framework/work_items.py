@@ -211,6 +211,9 @@ def create_work_item(
     _write_json(item_root / "workflow-state.json", state)
     _write_json(item_root / "handoff.json", handoff)
     _write_json(item_root / "asset-links.json", asset_links)
+    from .work_item_artifacts import initialize_artifact_registry
+
+    initialize_artifact_registry(root, requirement_id)
     (item_root / "decisions.md").write_text(
         f"# {requirement_id} 决策记录\n\n"
         "只记录已经确认且会影响后续测试的业务口径。不得记录账号、密码、Cookie、Token或客户隐私数据。\n\n"
@@ -228,6 +231,9 @@ def _build_handoff(manifest: Dict[str, Any], state: Dict[str, Any]) -> Dict[str,
         "requirement_id": manifest["requirement_id"],
         "title": manifest["title"],
         "feature": manifest["feature"],
+        "environments": manifest["environments"],
+        "platforms": manifest["platforms"],
+        "scope": manifest["scope"],
         "current_stage": state["stage"],
         "status": state["status"],
         "summary": state["summary"],
@@ -237,6 +243,7 @@ def _build_handoff(manifest: Dict[str, Any], state: Dict[str, Any]) -> Dict[str,
         "owner": state["owner"],
         "official_baseline": manifest["official_baseline"],
         "asset_links_path": "asset-links.json",
+        "artifact_registry_path": "artifacts.json",
         "decisions_path": "decisions.md",
         "updated_at": state["updated_at"],
     }
@@ -253,6 +260,9 @@ def update_work_item(
     blockers: Optional[Iterable[str]] = None,
     next_steps: Optional[Iterable[str]] = None,
     owner: Optional[str] = None,
+    add_environments: Optional[Iterable[str]] = None,
+    add_platforms: Optional[Iterable[str]] = None,
+    scope: Optional[str] = None,
     baseline_id: Optional[str] = None,
     baseline_path: Optional[str] = None,
     baseline_sha256: Optional[str] = None,
@@ -266,9 +276,21 @@ def update_work_item(
         raise FileNotFoundError(f"未找到需求 {requirement_id}，请先运行 work-item-create")
     manifest = _read_json(manifest_path)
     state = _read_json(state_path)
+    state["allowed_stages"] = STAGES
     if stage is not None:
         if stage not in STAGES:
             raise ValueError(f"未知阶段 {stage}")
+        crossing_case_design_gate = (
+            STAGES.index(state.get("stage", "INTAKE")) < STAGES.index("CASE_DESIGN")
+            and STAGES.index(stage) >= STAGES.index("CASE_DESIGN")
+        )
+        if crossing_case_design_gate:
+            from .work_item_artifacts import evaluate_stage_entry_gate
+
+            gate = evaluate_stage_entry_gate(root, requirement_id, "CASE_DESIGN")
+            if gate["status"] != "passed":
+                missing = "、".join(item["artifact_type"] for item in gate["missing"])
+                raise ValueError(f"CASE_DESIGN门禁未通过，缺少有效产物：{missing}")
         state["stage"] = stage
     if status is not None:
         if status not in WORK_ITEM_STATUSES:
@@ -284,6 +306,14 @@ def update_work_item(
         state["next_steps"] = _unique(next_steps)
     if owner is not None:
         state["owner"] = owner.strip() or "unassigned"
+    if add_environments is not None:
+        manifest["environments"] = _unique([*manifest.get("environments", []), *add_environments])
+    if add_platforms is not None:
+        manifest["platforms"] = _unique([*manifest.get("platforms", []), *add_platforms])
+    if scope is not None:
+        if not scope.strip():
+            raise ValueError("scope 不能为空")
+        manifest["scope"] = scope.strip()
     if any(value is not None for value in (baseline_id, baseline_path, baseline_sha256)):
         baseline = manifest["official_baseline"]
         if baseline_id is not None:
@@ -313,11 +343,36 @@ def show_work_item(root: Path, requirement_id: str) -> Dict[str, Any]:
     manifest = _read_json(manifest_path)
     state = _read_json(state_path)
     relative_root = f".ai-test/work-items/{requirement_id}"
+    from .work_item_artifacts import summarize_work_item_artifacts
+
+    read_first = [
+        f"{relative_root}/manifest.json",
+        f"{relative_root}/workflow-state.json",
+        f"{relative_root}/handoff.json",
+        f"{relative_root}/decisions.md",
+        f"{relative_root}/asset-links.json",
+    ]
+    if (item_root / "artifacts.json").exists():
+        read_first.append(f"{relative_root}/artifacts.json")
+    reconciliation_receipt = item_root / "reconciliation-receipt.json"
+    reconciliation = None
+    if reconciliation_receipt.exists():
+        read_first.append(f"{relative_root}/reconciliation-receipt.json")
+        receipt = _read_json(reconciliation_receipt)
+        reconciliation = {
+            "generated_at": receipt.get("generated_at"),
+            "consistency_status": receipt.get("consistency_status"),
+            "case_design_gate": receipt.get("case_design_gate"),
+            "issues": receipt.get("issues", []),
+        }
     return {
         "status": "ready",
         "requirement_id": requirement_id,
         "title": manifest["title"],
         "feature": manifest["feature"],
+        "environments": manifest["environments"],
+        "platforms": manifest["platforms"],
+        "scope": manifest["scope"],
         "current_status": state["status"],
         "current_stage": state["stage"],
         "summary": state["summary"],
@@ -326,13 +381,9 @@ def show_work_item(root: Path, requirement_id: str) -> Dict[str, Any]:
         "next_steps": state["next_steps"],
         "owner": state["owner"],
         "official_baseline": manifest["official_baseline"],
-        "read_first": [
-            f"{relative_root}/manifest.json",
-            f"{relative_root}/workflow-state.json",
-            f"{relative_root}/handoff.json",
-            f"{relative_root}/decisions.md",
-            f"{relative_root}/asset-links.json",
-        ],
+        "artifact_summary": summarize_work_item_artifacts(root, requirement_id),
+        "reconciliation": reconciliation,
+        "read_first": read_first,
         "takeover_prompt": f"接手需求 {requirement_id}，按工作项状态继续，不重复已完成步骤。",
     }
 

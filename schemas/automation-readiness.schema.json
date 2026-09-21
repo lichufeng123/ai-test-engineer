@@ -38,7 +38,9 @@
           "case_id": {"type": "string"},
           "required_role_ids": {"type": "array", "items": {"type": "string"}},
           "required_fixture_ids": {"type": "array", "items": {"type": "string"}},
-          "required_environment_ids": {"type": "array", "items": {"type": "string"}}
+          "required_environment_ids": {"type": "array", "items": {"type": "string"}},
+          "required_execution_target_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "required_hardware_fixture_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
         }
       }
     },
@@ -64,6 +66,40 @@
           "purpose": {"type": "string"},
           "source_or_factory": {"type": "string"},
           "case_ids": {"type": "array", "items": {"type": "string"}},
+          "status": {"enum": ["needed", "available", "missing", "not_applicable"]}
+        }
+      }
+    },
+    "execution_target_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_id", "platform", "target_kind", "executor_id", "required_capabilities", "case_ids", "status"],
+        "properties": {
+          "target_id": {"type": "string", "minLength": 1},
+          "platform": {"type": "string", "enum": ["web", "app", "h5", "miniapp", "api", "database"]},
+          "target_kind": {"type": "string", "enum": ["physical", "simulator", "emulator", "browser", "service", "database"]},
+          "executor_id": {"type": "string", "minLength": 1},
+          "os_family": {"type": ["string", "null"]},
+          "required_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "case_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "status": {"enum": ["needed", "available", "missing", "not_applicable"]}
+        }
+      }
+    },
+    "hardware_fixture_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["hardware_fixture_id", "fixture_type", "purpose", "case_ids", "status"],
+        "properties": {
+          "hardware_fixture_id": {"type": "string", "minLength": 1},
+          "fixture_type": {"type": "string", "minLength": 1},
+          "purpose": {"type": "string", "minLength": 1},
+          "source_or_factory": {"type": "string"},
+          "manual_preparation": {"type": "array", "items": {"type": "string"}},
+          "automated_validation": {"type": "array", "items": {"type": "string"}},
+          "case_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "status": {"enum": ["needed", "available", "missing", "not_applicable"]}
         }
       }

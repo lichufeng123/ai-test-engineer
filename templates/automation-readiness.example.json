@@ -31,6 +31,8 @@
     {"fixture_id": "valid_member_xlsx", "purpose": "合法导入", "source_or_factory": "data-generate", "case_ids": ["TC-MEMBER-001"], "status": "needed"},
     {"fixture_id": "duplicate_member_xlsx", "purpose": "重复数据校验", "source_or_factory": "data-generate", "case_ids": ["TC-MEMBER-002"], "status": "needed"}
   ],
+  "execution_target_requirements": [],
+  "hardware_fixture_requirements": [],
   "evidence_plan": {
     "screenshots": ["导入前列表", "导入结果反馈", "导入后列表与详情"],
     "videos": ["合法导入及回读核心链路"]

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "hardware_fixture_id": "bound_audio_device_employee_a",
+  "fixture_type": "bound_hardware",
+  "purpose": "使用提前绑定到员工测试角色的音频设备执行接待录音",
+  "manual_preparation": [
+    "设备提前绑定员工测试角色",
+    "设备在线且电量满足本轮执行",
+    "设备与App、Web后台属于同一测试环境和门店"
+  ],
+  "automated_validation": [
+    "App显示设备在线",
+    "App允许进入接待录音入口"
+  ],
+  "cleanup": [
+    "结束残留录音会话",
+    "释放设备租约",
+    "保留绑定关系供后续回归复用"
+  ],
+  "case_ids": ["<approved-case-id>"],
+  "lease": {
+    "exclusive": true,
+    "stale_after_seconds": 900
+  }
+}

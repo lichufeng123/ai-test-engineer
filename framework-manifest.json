@@ -1,14 +1,27 @@
 {
   "name": "ai-test-engineer",
-  "framework_version": "0.9.0",
-  "documentation_version": "0.9.0",
+  "framework_version": "0.11.0",
+  "documentation_version": "0.11.0",
   "python": ">=3.9",
   "canonical_handbook": "docs/FRAMEWORK.md",
   "canonical_skills_dir": ".agents/skills",
   "plugin_manifest_template": "plugin/plugin.json",
   "case_generation_adapter": "approved-test-case-baseline",
+  "work_item_artifact_registry_schema": "schemas/work-item-artifacts.schema.json",
+  "web_execution_routing_schema": "schemas/web-executor-routing.schema.json",
   "supported_platforms": ["web", "app", "h5", "miniapp"],
+  "executor_adapters": ["playwright", "minium", "agent-device"],
+  "web_browser_stack": {
+    "formal_executor": "playwright-test",
+    "discovery": ["ego-lite"],
+    "locator_assistance": ["playwright-mcp"],
+    "fallback": ["ego-lite"],
+    "diagnosis": ["chrome-devtools-mcp"],
+    "controlled_repair": ["stagehand"]
+  },
   "optional_tools": {
-    "video-check": ["ffprobe", "ffmpeg"]
+    "video-check": ["ffprobe", "ffmpeg"],
+    "agent-device": ["node>=22.12", "xcode", "adb"],
+    "web-browser-stack": ["playwright-mcp", "chrome-devtools-mcp", "ego-lite", "stagehand"]
   }
 }

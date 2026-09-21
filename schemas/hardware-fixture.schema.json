@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hardware Fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "hardware_fixture_id",
+    "fixture_type",
+    "purpose",
+    "manual_preparation",
+    "automated_validation",
+    "cleanup",
+    "case_ids"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "hardware_fixture_id": {"type": "string", "minLength": 1},
+    "fixture_type": {"type": "string", "minLength": 1},
+    "purpose": {"type": "string", "minLength": 1},
+    "manual_preparation": {"type": "array", "items": {"type": "string"}},
+    "automated_validation": {"type": "array", "items": {"type": "string"}},
+    "cleanup": {"type": "array", "items": {"type": "string"}},
+    "case_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exclusive": {"type": "boolean"},
+        "stale_after_seconds": {"type": "integer", "minimum": 1}
+      }
+    },
+    "password": {"not": {}},
+    "token": {"not": {}},
+    "cookie": {"not": {}},
+    "credentials": {"not": {}},
+    "account": {"not": {}},
+    "serial_number": {"not": {}}
+  }
+}

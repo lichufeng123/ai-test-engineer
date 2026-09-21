@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.9.0 -->
+<!-- FRAMEWORK_VERSION: 0.11.0 -->
 
 # AI Test Engineer
 
@@ -6,7 +6,7 @@
 
 AI Test Engineer 是一套可移植、以证据为先的 AI 测试工程框架。它把需求理解、系统与功能探索、已审核测试用例、测试数据、自动化执行、证据复核、测试报告和执行资产反哺连接为一条稳定流程。
 
-核心仅依赖 Python 标准库、Markdown 和 JSON Schema，可供不同 AI 助手及人工测试工程师共同使用。Codex、Playwright、Minium 等能力通过适配器接入，不改变正式需求、业务规则和测试用例的唯一基线。
+核心仅依赖 Python 标准库、Markdown 和 JSON Schema，可供不同 AI 助手及人工测试工程师共同使用。Playwright Test、Playwright MCP、Chrome DevTools MCP、Ego Lite、Stagehand、agent-device、Minium 等能力通过适配器接入，不改变正式需求、业务规则和测试用例的唯一基线。
 
 ## 跨客户端 Skill 与可选插件
 
@@ -50,7 +50,9 @@ ai-test work-item-create --root ./my-test-project \
 
 之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供全部需求的人类可读总览。
 
-完整说明见[一需求一任务使用说明](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)，普通使用者无需背诵工作流和长提示词。
+需求、规则、用例、执行包或报告产出后，使用 `work-item-artifact-register` 登记稳定产物ID、路径、SHA-256、审核状态和对应阶段；登记后工作项阶段自动推进。`work-item-reconcile` 对账文件缺失、哈希变化、状态落后、历史孤立产物以及 `CASE_DESIGN` 前的准备度计划和规则审核回执，避免“对话里已生成、工作项仍显示未生成”。
+
+完整说明见[一需求一任务使用说明](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)，普通使用者无需背诵工作流和长提示词。已有需求增加新环境或新平台时不创建第二个工作项，使用 `work-item-update --add-environment <env> --add-platform app --scope <增量范围>` 扩展原工作项并保留同一正式基线。
 
 首次接入且没有系统资产时，先生成系统探索计划：
 
@@ -74,6 +76,8 @@ ai-test discovery-plan \
 - `A-*`：原子业务断言，描述单一、可验证的预期结果。
 
 每个流程步骤必须引用原子断言；每条已确认流程至少需要一条覆盖完整步骤的端到端用例。用例通过 `covered_flow_ids` 和 `covered_rule_ids` 建立追踪。
+
+需求说明书、业务流程、业务断言和用例审核页均应支持筛选后批量通过，并在批量操作前二次确认；批量结果仍按稳定ID逐项保存且可单独改回。“需修改、不适用、待决策”、删除和依赖范围等高风险结论继续逐项审核，不允许批量绕过理由或门禁。
 
 完整用例基线还要通过执行粒度门禁。端到端用例用于证明整条业务链路，不能替代可单独准备数据、执行、判定、取证和重跑的功能、边界、异常、权限矩阵及数据一致性用例。同一字段的等价边界可以参数化；不同角色、平台、状态迁移、失败机制、服务端越权或副作用必须拆分。
 
@@ -106,7 +110,27 @@ ai-test readiness-check \
   --output ./runs/latest/execution_readiness_receipt.json
 ```
 
-实际执行前重新确认功能、环境、适用用例、账号角色、fixture和排除项。缺账号或数据只阻塞受影响用例并登记一次；相同前置指纹未变化前不重复尝试，其他已就绪用例继续执行。
+实际执行前重新确认功能、环境、适用用例、账号角色、fixture和排除项。移动端和实体设备测试还可声明 `execution_target_requirements` 与 `hardware_fixture_requirements`，并把能力检查通过的手机、模拟器和外设绑定到具体用例。缺账号、数据、执行目标或硬件只阻塞受影响用例并登记一次；相同前置指纹未变化前不重复尝试，其他已就绪用例继续执行。
+
+## 受控Web AI浏览器工具栈
+
+Web正式回归只使用Playwright Test。Ego Lite负责首轮语义/视觉探索和复用人工登录态；Playwright MCP只按需辅助生成或复核定位器，不是编写Playwright脚本的前置条件；Chrome DevTools MCP负责网络、Console和性能诊断，Stagehand只允许提出定位器、等待条件和已知瞬态弹窗修复。所有AI结果必须回到Playwright单用例验证与影响回归，任何工具都不得修改已审核预期。
+
+项目复制[路由模板](templates/web-executor-routing.example.json)后执行：
+
+```bash
+ai-test web-executor-check \
+  --input ./runs/latest/web-executor-routing.json \
+  --output ./runs/latest/web-executor-routing-receipt.json
+```
+
+完整分工、安全和修复闭环见[Web AI浏览器工具栈](docs/web-ai-browser-stack.md)。已可用工具必须锁定精确版本；凭据和浏览器认证状态只允许运行时提供。
+
+## AI-first移动设备执行
+
+框架通过与工具无关的执行目标和步骤回执接入移动自动化。首个AI-first适配器为[agent-device](adapters/agent-device/README.md)：AI可通过MCP或CLI探索App，稳定动作固化为`.ad`或Node API，正式回归继续引用唯一审核用例基线。`schemas/execution-target-profile.schema.json`描述手机或模拟器，`schemas/hardware-fixture.schema.json`描述提前绑定的耳机等外设，`schemas/cross-platform-run-plan.schema.json`与`schemas/execution-step-receipt.schema.json`用于串联App、API和Web并保存逐步证据。
+
+agent-device必须固定精确版本；真机标识、Bundle ID和凭据仅在运行时安全配置中提供。AI可以探索、诊断和提出修复，但不得临时修改业务预期或对不可逆写操作进行盲目重试。
 
 ## 自动化执行历史
 

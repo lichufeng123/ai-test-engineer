@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.9.0 -->
+<!-- FRAMEWORK_VERSION: 0.11.0 -->
 
 # AI Test Engineer
 
@@ -6,7 +6,7 @@ English | [简体中文](README.zh-CN.md)
 
 AI Test Engineer is a portable, evidence-first framework for guiding an AI agent through software testing. It connects requirement understanding, system and feature discovery, approved test-case baselines, fixture generation, execution, evidence review, reporting, and reusable execution assets.
 
-The core uses Python's standard library, Markdown, and JSON Schema. It works with any AI assistant; adapters describe optional integrations for Codex, Playwright, and Minium.
+The core uses Python's standard library, Markdown, and JSON Schema. It works with any AI assistant; adapters describe optional integrations for Playwright Test, Playwright MCP, Chrome DevTools MCP, Ego Lite, Stagehand, agent-device, and Minium.
 
 ## Portable skills and optional plugin
 
@@ -48,7 +48,9 @@ ai-test work-item-create --root ./my-test-project \
   --environment sit --platform web --scope "Approved test scope"
 ```
 
-In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` is the human-readable project index. See the [Chinese user guide](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md).
+In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` is the human-readable project index. Extend an existing requirement to a new environment or platform with `work-item-update --add-environment <env> --add-platform app --scope <incremental-scope>` instead of creating a second work item.
+
+Every generated requirement, rule, case, handoff, or report artifact is registered with `work-item-artifact-register`, including its stable artifact ID, path, SHA-256, review status, and workflow stage. `work-item-reconcile` detects missing or changed files, state that lags behind artifacts, unregistered legacy outputs, and attempts to enter `CASE_DESIGN` without an automation-readiness plan and validated rule-review receipt. See the [Chinese user guide](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md).
 
 For a new system, plan discovery before testing a feature:
 
@@ -63,6 +65,8 @@ ai-test discovery-plan \
 Use a reviewed test-case baseline as the single source of truth. The framework records its stable case IDs and hash in an execution handoff; UI automation is not a second case-management system.
 
 Before generating cases, classify the feature as isolated, linked, or pending. Infer likely upstream and downstream links from the system map, role model, entity model, and existing context before asking the product owner. Confirmed flows receive stable `BF-*` IDs and reference atomic `A-*` assertions; every confirmed flow must have at least one complete end-to-end case.
+
+Requirement, business-flow, assertion, and case review pages may batch-approve the current filtered set after explicit confirmation. Every batch decision is still stored per stable ID and remains individually editable. Changes, exclusions, pending decisions, removals, dependency scope, and other high-risk decisions stay item-by-item so batch actions cannot bypass required rationale or gates.
 
 The complete baseline must also pass an execution-granularity gate. End-to-end cases prove the whole business flow; they do not replace cases that can be prepared, executed, judged, evidenced, and rerun independently. Equivalent boundaries for one field may be parameterized, while different roles, platforms, state transitions, failure mechanisms, server-side authorization checks, or side effects remain separate.
 
@@ -91,7 +95,27 @@ ai-test readiness-check \
   --output ./runs/latest/execution_readiness_receipt.json
 ```
 
-The readiness receipt separates ready cases from cases blocked by missing roles or fixtures. Blocked cases are recorded once and are not retried until their prerequisite fingerprint changes; ready cases continue.
+The readiness receipt separates ready cases from cases blocked by missing roles, fixtures, execution targets, or hardware fixtures. Mobile and hardware-in-the-loop plans declare `execution_target_requirements` and `hardware_fixture_requirements`; only targets with a completed capability check are confirmed as available. Blocked cases are recorded once and are not retried until their prerequisite fingerprint changes; ready cases continue.
+
+## Guarded AI browser stack
+
+Web regression keeps Playwright Test as the only formal executor. Ego Lite is the default first-pass discovery tool and handles authenticated or visual exploration; Playwright MCP is optional assistance for generating or validating locators, not a prerequisite for writing Playwright scripts; Chrome DevTools MCP diagnoses network, console, and performance failures; Stagehand may only propose locator, wait-condition, or known-dialog repairs. Every agentic result returns to Playwright for a focused verification and impact regression, and no tool may change approved expectations.
+
+Validate the project routing contract before using the stack:
+
+```bash
+ai-test web-executor-check \
+  --input ./runs/latest/web-executor-routing.json \
+  --output ./runs/latest/web-executor-routing-receipt.json
+```
+
+Copy [the routing template](templates/web-executor-routing.example.json) and read the [Web AI browser stack guide](docs/web-ai-browser-stack.md). Available tools must pin exact versions; credentials and browser authentication state remain runtime-only.
+
+## AI-first mobile execution
+
+The framework models mobile automation through provider-neutral targets and step receipts. The first AI-first adapter is [agent-device](adapters/agent-device/README.md): an AI agent explores through MCP or CLI, reviewed actions become `.ad` or typed Node.js workflows, and formal regression continues to reference the single approved case baseline. `schemas/execution-target-profile.schema.json` describes phones and simulators, `schemas/hardware-fixture.schema.json` describes pre-bound peripherals, and the cross-platform run-plan and step-receipt schemas connect app, API, and web evidence.
+
+Pin an exact agent-device version. Device identifiers, app identifiers, endpoints, and credentials remain runtime-only. AI may explore, diagnose, and propose repairs, but it must not change approved expectations or blindly retry irreversible writes.
 
 ## Automation execution history
 

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "executor_id": "agent-device",
+  "executor_version": "<exact-version>",
+  "target_id": "ios_physical_primary",
+  "checked_at": "<iso-8601>",
+  "capabilities": {
+    "snapshot": "required",
+    "interaction": "required",
+    "screenshot": "required",
+    "video": "required",
+    "app_logs": "required",
+    "network": "optional",
+    "audio_probe": "unsupported_for_physical_mobile"
+  },
+  "source": "agent-device doctor and capabilities command output",
+  "status": "pending_validation"
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "formal_executor": "playwright-test",
+  "approved_baseline_required": true,
+  "tools": [
+    {
+      "id": "playwright-test",
+      "availability": "available",
+      "exact_version": "1.63.0",
+      "roles": ["formal_regression"],
+      "notes": ["稳定回归、CI、断言、Trace、视频和报告的唯一正式执行器"]
+    },
+    {
+      "id": "playwright-mcp",
+      "availability": "planned",
+      "exact_version": null,
+      "roles": ["locator_generation", "locator_validation"],
+      "notes": ["可选工具；安装后锁定精确版本，用于生成或复核Playwright定位器，不是编写脚本的前置依赖"]
+    },
+    {
+      "id": "chrome-devtools-mcp",
+      "availability": "planned",
+      "exact_version": null,
+      "roles": ["diagnosis", "network", "console", "performance"],
+      "notes": ["安装后锁定精确版本；内部环境关闭CrUX并开启敏感请求头脱敏"]
+    },
+    {
+      "id": "ego-lite",
+      "availability": "available",
+      "exact_version": "1.2.3",
+      "roles": ["discovery", "authenticated_exploration", "fallback"],
+      "notes": ["首轮探索主工具；复用人工登录态、视觉或语义探索、失败现场复核"]
+    },
+    {
+      "id": "stagehand",
+      "availability": "planned",
+      "exact_version": null,
+      "roles": ["controlled_self_heal"],
+      "notes": ["安装后锁定精确版本；仅提出定位器、等待和已知瞬态弹窗修复候选"]
+    }
+  ],
+  "routes": {
+    "new_feature_discovery": {
+      "primary": "ego-lite",
+      "fallbacks": []
+    },
+    "playwright_locator_assist": {
+      "primary": "playwright-mcp",
+      "fallbacks": ["ego-lite"]
+    },
+    "authenticated_or_visual_fallback": {
+      "primary": "ego-lite",
+      "fallbacks": []
+    },
+    "failure_diagnosis": {
+      "primary": "chrome-devtools-mcp",
+      "fallbacks": ["ego-lite"]
+    },
+    "locator_repair": {
+      "primary": "stagehand",
+      "fallbacks": ["ego-lite", "playwright-mcp"],
+      "requires_validation_by": "playwright-test"
+    },
+    "formal_regression": {
+      "primary": "playwright-test",
+      "fallbacks": []
+    }
+  },
+  "policies": {
+    "formal_expectations_immutable": true,
+    "playwright_mcp_required_for_script_generation": false,
+    "credentials_runtime_only": true,
+    "high_risk_write_requires_approval": true,
+    "agentic_output_requires_playwright_validation": true,
+    "stagehand": {
+      "allowed_changes": ["locator", "wait_condition", "known_transient_dialog"],
+      "forbidden_changes": [
+        "expected_result",
+        "business_rule",
+        "assertion_removal",
+        "blind_write_retry"
+      ]
+    }
+  }
+}

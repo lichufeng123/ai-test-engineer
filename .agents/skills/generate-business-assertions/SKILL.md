@@ -4,7 +4,7 @@ description: Use when reviewed requirements and current business knowledge must 
 license: MIT
 metadata:
   author: ai-test-engineer
-  version: "0.4.1"
+  version: "0.4.2"
 ---
 
 # 生成业务流程与原子断言
@@ -32,7 +32,7 @@ metadata:
 
 涉及权限时读取 [权限测试设计规范](../test-case-generate/references/permission-testing.md)，同时建模授权流程 `BF-*` 和权限原子断言 `A-*`。区分上级资格、角色动作和组织范围；浏览与编辑依赖及生效时机必须有来源，不把系统特例升级为通用业务事实。
 
-审核入口先展示业务流程，再展示原子断言、来源、变更、冲突和覆盖审计。产品经理对流程和规则分别做最终审核。
+审核入口先展示业务流程，再展示原子断言、来源、变更、冲突和覆盖审计。产品经理对流程和规则分别做最终审核。页面必须支持在二次确认后批量通过全部业务流程、当前筛选断言或当前业务域断言，并把批量结果保存为与逐条审核等价的逐项 `approved` 结论；批量后仍可逐条修改。“需修改、待决策、不适用”、删除断言、依赖域与完整性审批不得批量设置，必须逐项填写或确认。
 
 依赖人审不能只展示英文模块编码或 `covered/current_fact` 等机器状态。每个必查业务域必须展示中文业务域名称、具体职责、关联 `BF-*` 业务流程、判断依据、本轮影响、覆盖状态和优先级；英文编码只作为辅助标识。
 
@@ -46,6 +46,20 @@ metadata:
 - `rule_change_set.json`
 - `flow_assertion_matrix.json`
 - `rule_review_receipt.json`
+
+审核页生成并通过机器校验后，必须立即登记为待审核产物，不能等到后续会话手工回写：
+
+```bash
+ai-test work-item-artifact-register \
+  --root <project-root> --requirement-id <REQ-ID> \
+  --artifact-id <稳定审核页产物ID> \
+  --artifact-type business_assertion_review_page \
+  --path <business_assertions_review.html> \
+  --status review_pending --stage BUSINESS_ASSERTION_REVIEW \
+  --baseline-id <BL-ID>
+```
+
+人工审核导出通过校验后，再把 `rule_review_receipt.json` 以 `artifact_type=rule_review_receipt`、`status=review_validated`、`stage=RULE_CURRENT_SYNC` 登记。规则 Current 同步完成后登记 `artifact_type=rule_current_sync_disposition`、`status=synced`；标准生成不写外部 Current 时也必须生成有原因的处置回执并登记为 `status=not_applicable`。登记后运行 `ai-test work-item-reconcile`；没有审核导出和审核回执时，不得把审核页“已生成”表述为规则审核完成。
 
 使用以下门禁验证流程引用：
 

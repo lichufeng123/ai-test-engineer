@@ -9,6 +9,10 @@
   "data_plan_confirmed": true,
   "available_role_ids": ["org_admin"],
   "ready_fixture_ids": ["valid_member_xlsx"],
+  "execution_targets_confirmed": true,
+  "hardware_fixtures_confirmed": true,
+  "available_execution_target_ids": [],
+  "ready_hardware_fixture_ids": [],
   "excluded_case_ids": [],
   "confirmed_at": "2026-09-14T10:00:00+08:00"
 }

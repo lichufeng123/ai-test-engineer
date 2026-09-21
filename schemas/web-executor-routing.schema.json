@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Guarded Web Executor Routing",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "formal_executor",
+    "approved_baseline_required",
+    "tools",
+    "routes",
+    "policies"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "formal_executor": {"const": "playwright-test"},
+    "approved_baseline_required": {"const": true},
+    "tools": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "availability", "exact_version", "roles"],
+        "properties": {
+          "id": {
+            "enum": [
+              "playwright-test",
+              "playwright-mcp",
+              "chrome-devtools-mcp",
+              "ego-lite",
+              "stagehand"
+            ]
+          },
+          "availability": {"enum": ["available", "planned", "blocked"]},
+          "exact_version": {"type": ["string", "null"]},
+          "roles": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "notes": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "routes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "new_feature_discovery",
+        "playwright_locator_assist",
+        "authenticated_or_visual_fallback",
+        "failure_diagnosis",
+        "locator_repair",
+        "formal_regression"
+      ],
+      "properties": {
+        "new_feature_discovery": {"$ref": "#/$defs/route"},
+        "playwright_locator_assist": {"$ref": "#/$defs/route"},
+        "authenticated_or_visual_fallback": {"$ref": "#/$defs/route"},
+        "failure_diagnosis": {"$ref": "#/$defs/route"},
+        "locator_repair": {"$ref": "#/$defs/repairRoute"},
+        "formal_regression": {"$ref": "#/$defs/route"}
+      }
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formal_expectations_immutable",
+        "playwright_mcp_required_for_script_generation",
+        "credentials_runtime_only",
+        "high_risk_write_requires_approval",
+        "agentic_output_requires_playwright_validation",
+        "stagehand"
+      ],
+      "properties": {
+        "formal_expectations_immutable": {"const": true},
+        "playwright_mcp_required_for_script_generation": {"const": false},
+        "credentials_runtime_only": {"const": true},
+        "high_risk_write_requires_approval": {"const": true},
+        "agentic_output_requires_playwright_validation": {"const": true},
+        "stagehand": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed_changes", "forbidden_changes"],
+          "properties": {
+            "allowed_changes": {
+              "type": "array",
+              "items": {
+                "enum": ["locator", "wait_condition", "known_transient_dialog"]
+              },
+              "uniqueItems": true
+            },
+            "forbidden_changes": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "expected_result",
+                  "business_rule",
+                  "assertion_removal",
+                  "blind_write_retry"
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "password": {"not": {}},
+    "token": {"not": {}},
+    "cookie": {"not": {}},
+    "credentials": {"not": {}}
+  },
+  "$defs": {
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "fallbacks"],
+      "properties": {
+        "primary": {"type": "string", "minLength": 1},
+        "fallbacks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "repairRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "fallbacks", "requires_validation_by"],
+      "properties": {
+        "primary": {"type": "string", "minLength": 1},
+        "fallbacks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "requires_validation_by": {"const": "playwright-test"}
+      }
+    }
+  }
+}

@@ -96,6 +96,8 @@ def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
     plan = copy.deepcopy(source)
     plan.setdefault("manual_only_case_ids", [])
     plan.setdefault("open_questions", [])
+    plan.setdefault("execution_target_requirements", [])
+    plan.setdefault("hardware_fixture_requirements", [])
     plan["status"] = "planned"
 
     case_ids = _case_ids(plan)
@@ -110,6 +112,38 @@ def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
     if unknown_manual:
         raise ValueError("unknown_manual_only_case_id:" + ",".join(sorted(unknown_manual)))
 
+    target_ids = [item.get("target_id") for item in plan["execution_target_requirements"]]
+    if any(not target_id for target_id in target_ids):
+        raise ValueError("missing_execution_target_id")
+    if len(target_ids) != len(set(target_ids)):
+        raise ValueError("duplicate_execution_target_id")
+    hardware_ids = [
+        item.get("hardware_fixture_id") for item in plan["hardware_fixture_requirements"]
+    ]
+    if any(not fixture_id for fixture_id in hardware_ids):
+        raise ValueError("missing_hardware_fixture_id")
+    if len(hardware_ids) != len(set(hardware_ids)):
+        raise ValueError("duplicate_hardware_fixture_id")
+
+    known_targets = set(target_ids)
+    known_hardware = set(hardware_ids)
+    known_cases = set(case_ids)
+    for target in plan["execution_target_requirements"]:
+        unknown_cases = set(target.get("case_ids", [])) - known_cases
+        if unknown_cases:
+            raise ValueError("unknown_execution_target_case_id:" + ",".join(sorted(unknown_cases)))
+    for fixture in plan["hardware_fixture_requirements"]:
+        unknown_cases = set(fixture.get("case_ids", [])) - known_cases
+        if unknown_cases:
+            raise ValueError("unknown_hardware_fixture_case_id:" + ",".join(sorted(unknown_cases)))
+    for requirement in plan["case_requirements"]:
+        unknown_targets = set(requirement.get("required_execution_target_ids", [])) - known_targets
+        if unknown_targets:
+            raise ValueError("unknown_execution_target_id:" + ",".join(sorted(unknown_targets)))
+        unknown_hardware = set(requirement.get("required_hardware_fixture_ids", [])) - known_hardware
+        if unknown_hardware:
+            raise ValueError("unknown_hardware_fixture_id:" + ",".join(sorted(unknown_hardware)))
+
     plan["plan_sha256"] = plan_sha256(plan)
     return plan
 
@@ -119,6 +153,8 @@ def _prerequisite_fingerprint(
     missing_roles: List[str],
     missing_fixtures: List[str],
     missing_environments: List[str],
+    missing_execution_targets: List[str],
+    missing_hardware_fixtures: List[str],
 ) -> str:
     return hashlib.sha256(
         _canonical_json(
@@ -127,6 +163,8 @@ def _prerequisite_fingerprint(
                 "missing_role_ids": missing_roles,
                 "missing_fixture_ids": missing_fixtures,
                 "missing_environment_ids": missing_environments,
+                "missing_execution_target_ids": missing_execution_targets,
+                "missing_hardware_fixture_ids": missing_hardware_fixtures,
             }
         )
     ).hexdigest()
@@ -167,6 +205,14 @@ def evaluate_execution_readiness(
     for field, code in CONFIRMATION_FIELDS.items():
         if confirmation.get(field) is not True:
             error_codes.append(code)
+    if plan.get("execution_target_requirements") and confirmation.get(
+        "execution_targets_confirmed"
+    ) is not True:
+        error_codes.append("execution_targets_not_confirmed")
+    if plan.get("hardware_fixture_requirements") and confirmation.get(
+        "hardware_fixtures_confirmed"
+    ) is not True:
+        error_codes.append("hardware_fixtures_not_confirmed")
 
     gate_blocked = bool(error_codes)
     if gate_blocked:
@@ -185,6 +231,8 @@ def evaluate_execution_readiness(
 
     available_roles = set(confirmation["available_role_ids"])
     ready_fixtures = set(confirmation["ready_fixture_ids"])
+    available_execution_targets = set(confirmation.get("available_execution_target_ids", []))
+    ready_hardware_fixtures = set(confirmation.get("ready_hardware_fixture_ids", []))
     target_environment = confirmation["target_environment"]
     excluded = set(confirmation["excluded_case_ids"]) | set(plan.get("manual_only_case_ids", []))
     previous_by_fingerprint = {
@@ -204,12 +252,31 @@ def evaluate_execution_readiness(
         missing_fixtures = sorted(set(requirement.get("required_fixture_ids", [])) - ready_fixtures)
         required_environments = set(requirement.get("required_environment_ids", []))
         missing_environments = [] if target_environment in required_environments else sorted(required_environments)
-        if not (missing_roles or missing_fixtures or missing_environments):
+        missing_execution_targets = sorted(
+            set(requirement.get("required_execution_target_ids", []))
+            - available_execution_targets
+        )
+        missing_hardware_fixtures = sorted(
+            set(requirement.get("required_hardware_fixture_ids", []))
+            - ready_hardware_fixtures
+        )
+        if not (
+            missing_roles
+            or missing_fixtures
+            or missing_environments
+            or missing_execution_targets
+            or missing_hardware_fixtures
+        ):
             ready.append(case_id)
             continue
 
         fingerprint = _prerequisite_fingerprint(
-            case_id, missing_roles, missing_fixtures, missing_environments
+            case_id,
+            missing_roles,
+            missing_fixtures,
+            missing_environments,
+            missing_execution_targets,
+            missing_hardware_fixtures,
         )
         blocked.append(
             {
@@ -217,6 +284,8 @@ def evaluate_execution_readiness(
                 "missing_role_ids": missing_roles,
                 "missing_fixture_ids": missing_fixtures,
                 "missing_environment_ids": missing_environments,
+                "missing_execution_target_ids": missing_execution_targets,
+                "missing_hardware_fixture_ids": missing_hardware_fixtures,
                 "execution_action": "skip_without_retry",
                 "resume_condition": "prerequisite_fingerprint_changed",
             }
@@ -229,6 +298,8 @@ def evaluate_execution_readiness(
                 "missing_role_ids": missing_roles,
                 "missing_fixture_ids": missing_fixtures,
                 "missing_environment_ids": missing_environments,
+                "missing_execution_target_ids": missing_execution_targets,
+                "missing_hardware_fixture_ids": missing_hardware_fixtures,
                 "first_detected_at": confirmation.get("confirmed_at"),
                 "retry_count": 0,
                 "retry_allowed": False,

@@ -115,6 +115,88 @@ class ExecutionReadinessTest(unittest.TestCase):
         self.assertEqual(second["missing_prerequisites"], first["missing_prerequisites"])
         self.assertEqual(second["blocked_cases"][0]["execution_action"], "skip_without_retry")
 
+    def test_mobile_targets_and_hardware_block_only_dependent_cases(self):
+        source = readiness_source()
+        source["automation_scope"]["platforms"] = ["web", "app"]
+        source["execution_target_requirements"] = [
+            {
+                "target_id": "ios_physical_primary",
+                "platform": "app",
+                "target_kind": "physical",
+                "executor_id": "agent-device",
+                "required_capabilities": ["snapshot", "interaction", "screenshot", "video"],
+                "case_ids": ["TC-002"],
+                "status": "needed",
+            }
+        ]
+        source["hardware_fixture_requirements"] = [
+            {
+                "hardware_fixture_id": "bound_audio_device_employee_a",
+                "fixture_type": "bound_hardware",
+                "purpose": "已绑定员工账号的录音设备",
+                "case_ids": ["TC-002"],
+                "status": "needed",
+            }
+        ]
+        source["case_requirements"][1].update({
+            "required_execution_target_ids": ["ios_physical_primary"],
+            "required_hardware_fixture_ids": ["bound_audio_device_employee_a"],
+        })
+        plan = build_readiness_plan(source)
+        result = evaluate_execution_readiness(
+            plan,
+            confirmation(
+                plan,
+                ready_fixture_ids=["unassigned_recording"],
+                execution_targets_confirmed=True,
+                hardware_fixtures_confirmed=True,
+                available_execution_target_ids=[],
+                ready_hardware_fixture_ids=[],
+            ),
+        )
+
+        self.assertEqual(result["status"], "passed_with_case_blocks")
+        self.assertEqual(result["ready_case_ids"], ["TC-001"])
+        blocked = result["blocked_cases"][0]
+        self.assertEqual(blocked["missing_execution_target_ids"], ["ios_physical_primary"])
+        self.assertEqual(
+            blocked["missing_hardware_fixture_ids"], ["bound_audio_device_employee_a"]
+        )
+
+    def test_mobile_target_confirmation_is_a_global_gate_when_declared(self):
+        source = readiness_source()
+        source["execution_target_requirements"] = [
+            {
+                "target_id": "ios_physical_primary",
+                "platform": "app",
+                "target_kind": "physical",
+                "executor_id": "agent-device",
+                "required_capabilities": ["snapshot"],
+                "case_ids": ["TC-001"],
+                "status": "needed",
+            }
+        ]
+        source["case_requirements"][0]["required_execution_target_ids"] = [
+            "ios_physical_primary"
+        ]
+        plan = build_readiness_plan(source)
+        result = evaluate_execution_readiness(
+            plan,
+            confirmation(
+                plan,
+                execution_targets_confirmed=False,
+                available_execution_target_ids=["ios_physical_primary"],
+            ),
+        )
+        self.assertEqual(result["status"], "blocked")
+        self.assertIn("execution_targets_not_confirmed", result["error_codes"])
+
+    def test_unknown_mobile_target_reference_is_rejected_while_planning(self):
+        source = readiness_source()
+        source["case_requirements"][0]["required_execution_target_ids"] = ["missing-target"]
+        with self.assertRaisesRegex(ValueError, "unknown_execution_target_id"):
+            build_readiness_plan(source)
+
     def test_plan_hash_or_unconfirmed_scope_blocks_all_execution(self):
         plan = build_readiness_plan(readiness_source())
         result = evaluate_execution_readiness(
@@ -163,6 +245,23 @@ class ExecutionReadinessTest(unittest.TestCase):
             self.assertEqual(code, 0, stdout.getvalue())
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             self.assertEqual(receipt["status"], "passed_with_case_blocks")
+
+    def test_repository_contains_mobile_target_hardware_and_receipt_contracts(self):
+        for relative_path in (
+            "schemas/execution-target-profile.schema.json",
+            "schemas/hardware-fixture.schema.json",
+            "schemas/cross-platform-run-plan.schema.json",
+            "schemas/execution-step-receipt.schema.json",
+            "templates/execution-target-profile.mobile.example.json",
+            "templates/hardware-fixture.mobile.example.json",
+        ):
+            payload = json.loads((ROOT / relative_path).read_text(encoding="utf-8"))
+            if relative_path.startswith("schemas/"):
+                self.assertEqual(
+                    payload["$schema"], "https://json-schema.org/draft/2020-12/schema"
+                )
+            else:
+                self.assertEqual(payload["schema_version"], 1)
 
     def test_workflow_places_planning_after_requirement_and_confirmation_before_gate(self):
         self.assertLess(

@@ -66,10 +66,13 @@
 
 ### 3.3 执行适配器
 
-- Playwright：Web稳定回归、接口监听、下载、截图、视频和Trace。
+- Playwright Test：Web正式回归、接口监听、下载、截图、视频和Trace。
+- Ego Lite：新需求首轮语义/视觉探索、人工登录态复用和失败现场复核。
+- Playwright MCP：可选的Playwright定位器生成与复核，不作为脚本编写前置条件。
+- Chrome DevTools MCP：网络、Console、性能和浏览器现场诊断。
+- Stagehand：受控生成定位器、等待条件和已知瞬态弹窗修复候选，必须回到Playwright验证。
 - Minium：小程序关键业务、异常、权限、幂等和一致性。
 - MiniTest：规划用于云真机、兼容、性能、版本回归和CI门禁。
-- Codex/Computer Use：首次系统探索、页面状态识别和失败诊断。
 - 组织私有适配器：飞书、知识库和缺陷平台等内部连接。
 
 ## 4. 已完成能力

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "target_id": "ios_physical_primary",
+  "platform": "app",
+  "target_kind": "physical",
+  "executor_id": "agent-device",
+  "os_family": "ios",
+  "required_capabilities": [
+    "snapshot",
+    "interaction",
+    "screenshot",
+    "video",
+    "app_logs"
+  ],
+  "selection": {
+    "strategy": "environment_reference",
+    "runtime_alias": null,
+    "environment_variable": "AI_TEST_MOBILE_TARGET"
+  },
+  "lease": {
+    "exclusive": true,
+    "stale_after_seconds": 900
+  },
+  "notes": [
+    "真实设备标识仅由运行时环境变量提供",
+    "执行前完成信任、解锁、Developer Mode和能力检查"
+  ]
+}

@@ -51,4 +51,6 @@ metadata:
 - UI单步两分钟无页面、接口、下载、日志或状态进展时，保存证据并报告阻塞。
 - 每个阶段输出：`当前完成 / 下一步必须 / 下一步可选 / 推荐动作`。
 
-默认一个测试需求使用一个任务。用户说“接手需求 REQ-XXX”时，先运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并读取 `read_first` 返回的全部文件；用户无需复述整套规则。新需求使用 `work-item-create`，进展使用 `work-item-update`。运行状态写入 `.ai-test/work-items/<requirement-id>/`，不得把两个需求写入同一个状态文件。聊天记录只提供上下文。需要确定性检查时运行 `ai-test --help` 选择对应门禁。
+默认一个测试需求使用一个任务。用户说“接手需求 REQ-XXX”时，先运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并读取 `read_first` 返回的全部文件；用户无需复述整套规则。新需求使用 `work-item-create`，进展使用 `work-item-update`。运行状态写入 `.ai-test/work-items/<requirement-id>/`，不得把两个需求写入同一个状态文件。聊天记录只提供上下文。
+
+任何需求、规则、用例、执行包或报告产物生成后，立即运行 `ai-test work-item-artifact-register`，登记稳定产物ID、类型、路径、SHA-256、审核状态、运行/基线ID和对应阶段。审核页生成使用 `review_pending`，不得写成审核完成。切换会话、进入 `CASE_DESIGN` 或状态与文件不一致时运行 `ai-test work-item-reconcile`；缺自动化准备度计划或已校验规则审核回执时不得进入正式用例设计。需要其他确定性检查时运行 `ai-test --help` 选择对应门禁。

@@ -17,6 +17,12 @@ from .execution_history import finish_execution, start_execution
 from .project import STAGES, initialize_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
 from .video_quality import check_videos
+from .web_execution_routing import check_web_execution_routing
+from .work_item_artifacts import (
+    ARTIFACT_STATUSES,
+    reconcile_work_item,
+    register_work_item_artifact,
+)
 from .work_items import create_work_item, list_work_items, show_work_item, update_work_item
 
 
@@ -26,7 +32,7 @@ def _read(path: str):
 
 def _emit(value) -> int:
     print(json.dumps(value, ensure_ascii=False, indent=2))
-    return 0 if value.get("status") not in {"failed", "repair_required", "blocked"} else 1
+    return 0 if value.get("status") not in {"failed", "repair_required", "blocked", "inconsistent"} else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,9 +74,41 @@ def build_parser() -> argparse.ArgumentParser:
     work_update.add_argument("--blocker", action="append", dest="blockers")
     work_update.add_argument("--next-step", action="append", dest="next_steps")
     work_update.add_argument("--owner")
+    work_update.add_argument("--add-environment", action="append", dest="add_environments")
+    work_update.add_argument(
+        "--add-platform",
+        action="append",
+        choices=["web", "app", "h5", "miniapp"],
+        dest="add_platforms",
+    )
+    work_update.add_argument("--scope")
     work_update.add_argument("--baseline-id")
     work_update.add_argument("--baseline-path")
     work_update.add_argument("--baseline-sha256")
+
+    artifact_register = commands.add_parser(
+        "work-item-artifact-register",
+        help="登记需求产物、内容哈希、审核状态和对应阶段",
+    )
+    artifact_register.add_argument("--root", default=".")
+    artifact_register.add_argument("--requirement-id", required=True)
+    artifact_register.add_argument("--artifact-id", required=True)
+    artifact_register.add_argument("--artifact-type", required=True)
+    artifact_register.add_argument("--path", required=True)
+    artifact_register.add_argument("--status", required=True, choices=ARTIFACT_STATUSES)
+    artifact_register.add_argument("--stage", required=True, choices=STAGES)
+    artifact_register.add_argument("--baseline-id")
+    artifact_register.add_argument("--run-id")
+    artifact_register.add_argument("--parent-artifact-id")
+
+    reconcile = commands.add_parser(
+        "work-item-reconcile",
+        help="对账工作项阶段、已登记产物、用例生成门禁和孤立产物",
+    )
+    reconcile.add_argument("--root", default=".")
+    reconcile.add_argument("--requirement-id", required=True)
+    reconcile.add_argument("--discover-root", action="append", dest="discover_roots")
+    reconcile.add_argument("--apply", action="store_true", help="阶段落后时推进到已验证产物对应阶段")
 
     discovery = commands.add_parser("discovery-plan", help="判断是否需要全局或增量探索")
     discovery.add_argument("--project", required=True)
@@ -112,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
     permission.add_argument("--matrix", required=True)
     permission.add_argument("--cases", required=True)
     permission.add_argument("--output", required=True)
+
+    web_executor = commands.add_parser(
+        "web-executor-check",
+        help="校验Playwright MCP、Chrome DevTools MCP、Ego Lite、Stagehand与正式回归的受控分工",
+    )
+    web_executor.add_argument("--input", required=True)
+    web_executor.add_argument("--output", required=True)
 
     skills_check = commands.add_parser("skills-check", help="校验跨客户端 Skill 与插件清单")
     skills_check.add_argument("--root", default=".")
@@ -200,8 +245,23 @@ def main(argv=None) -> int:
             Path(args.root), requirement_id=args.requirement_id, stage=args.stage,
             status=args.status, summary=args.summary, completed=args.completed,
             blockers=args.blockers, next_steps=args.next_steps, owner=args.owner,
-            baseline_id=args.baseline_id, baseline_path=args.baseline_path,
+            add_environments=args.add_environments, add_platforms=args.add_platforms,
+            scope=args.scope, baseline_id=args.baseline_id, baseline_path=args.baseline_path,
             baseline_sha256=args.baseline_sha256,
+        ))
+    if args.command == "work-item-artifact-register":
+        return _emit(register_work_item_artifact(
+            Path(args.root), requirement_id=args.requirement_id,
+            artifact_id=args.artifact_id, artifact_type=args.artifact_type,
+            path=args.path, status=args.status, stage=args.stage,
+            baseline_id=args.baseline_id, run_id=args.run_id,
+            parent_artifact_id=args.parent_artifact_id,
+        ))
+    if args.command == "work-item-reconcile":
+        return _emit(reconcile_work_item(
+            Path(args.root), args.requirement_id,
+            discover_roots=[Path(value) for value in (args.discover_roots or [])],
+            apply=args.apply,
         ))
     if args.command == "discovery-plan":
         value = plan_discovery(project=_read(args.project),
@@ -264,6 +324,12 @@ def main(argv=None) -> int:
         payload = _read(args.cases)
         cases = payload.get("cases", []) if isinstance(payload, dict) else payload
         value = check_permission_coverage(_read(args.matrix), cases)
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
+    if args.command == "web-executor-check":
+        value = check_web_execution_routing(_read(args.input))
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

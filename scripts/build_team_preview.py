@@ -18,7 +18,7 @@ PUBLIC_DIRS = (
     "templates", "tests", "examples/synthetic_adapter_projects",
 )
 EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", ".venv", "node_modules", "dist", "build", "benchmarks"}
-ALLOWED_SUFFIXES = {".md", ".json", ".py", ".ts", ".js", ".mjs", ".toml", ".cfg", ".yml", ".yaml", ".txt", ".ad", ".gitignore"}
+ALLOWED_SUFFIXES = {".md", ".json", ".py", ".ts", ".js", ".mjs", ".toml", ".cfg", ".yml", ".yaml", ".txt", ".ad", ".lock", ".gitignore"}
 FORBIDDEN_TEXT = ("/Users/" + "chenhao", "yizhitech." + "feishu.cn", "yizhi-" + "test-assets")
 
 

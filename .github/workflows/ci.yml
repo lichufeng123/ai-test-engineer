@@ -30,10 +30,12 @@ jobs:
         with:
           python-version: '3.11'
       - name: Domain-neutral adapter and onboarding tests
-        run: python -m unittest discover -s tests -p 'test_adapter_trace.py' -v
+        run: python scripts/ci_adapter_smoke.py
       - name: API-only project onboarding tests
         run: python -m unittest discover -s tests -p 'test_team_doctor.py' -v
-      - name: Versioned wheel builds offline
+      - name: Ensure Python wheel build backend is available
+        run: python -m pip install 'setuptools>=61' wheel
+      - name: Versioned wheel builds without dependency resolution
         run: python -m pip wheel . --no-deps --no-build-isolation --no-index --wheel-dir portable-wheel
       - name: Installed adapter module and CLI load
         run: python -c "import subprocess,sys,pathlib,tempfile,json; w=next(pathlib.Path('portable-wheel').glob('*.whl')); d=tempfile.mkdtemp(); subprocess.check_call([sys.executable,'-m','pip','install','--no-index','--no-deps','--target',d,str(w)]); sys.path.insert(0,d); import ai_test_framework; import ai_test_framework.synthetic_adapter_runner; assert ai_test_framework.__version__==json.loads(pathlib.Path('framework-manifest.json').read_text())['framework_version']; print(ai_test_framework.__file__)"

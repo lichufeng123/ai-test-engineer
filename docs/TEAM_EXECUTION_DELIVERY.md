@@ -47,7 +47,7 @@
 
 ## 本机可复判证据
 
-- 公开单测：`python3 -m unittest discover -s tests -p 'test_*.py' -q`，当前 175 项通过；无真实业务执行。
+- 公开单测：`python3 -m unittest discover -s tests -p 'test_*.py' -q`，当前 176 项通过；无真实业务执行。
 - 公开样板通过离线 npm 缓存安装，使用本机 Microsoft Edge 实际运行两轮，每轮 2 项虚构正负控通过。计划和原始产物在 ignored `runs/RUN-20261004-FRAMEWORK-SYNTH-001/`、`runs/RUN-20261004-FRAMEWORK-SYNTH-002/`；第二轮准备脚本 `prepare.py` 保存所有哈希绑定。第二轮真实 reporter 的 `playwright-receipts-check` 为 `passed`；对副本篡改断言状态后为 `blocked/assertion_not_passed`，原始报告未修改。两个 run 都以 `partial` 收口，因为媒体语义隐私审查尚未完成，且没有业务预期/真实环境。
 - `RUN-20261004-GUARDED-SYNTH-001`（浏览器前 CLI 路径错误、随后标题锚定导致 No tests found）以 `blocked` 保留；独立 `-002`～`-004` 均由本机 Edge 单次运行产生仅 1 项真实 reporter 测试通过。`RUN-20261004-GUARDED-SYNTH-005` 首次无需修改旧脚本：通过 `synthetic-run-prepare` 当场生成新 run 包，接着 `guarded-web-run` 驱动 Edge，仅 1 项 reporter 通过，含 A-EXAMPLE-001 附件与视频。最终独立 `-006` 同样经两条公开命令运行，额外绑定随包锁文件，reporter SHA-256 为 `b95f98000a35f6250d2ba1631377cba2792d6e4be209112e443360c21bd8a47f`；退出码 1 / `review_required`，执行日志 `partial`，`product_verdict=not_evaluated`。计划、原始 reporter、技术报告和待审核资产反馈均在 ignored 虚构项目 run 目录。失败运行不覆盖、未知状态不重跑。
 - `privacy-check` 对前期第二轮媒体/报告给出 `blocked/semantic_privacy_review_missing`；阶段计时仅一条样本（fixture 0ms、navigation 31ms、action 38ms、assertion 1ms），不构成整体性能结论。新的纵切媒体仍未完成人工审查。

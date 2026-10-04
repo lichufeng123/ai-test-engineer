@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -138,6 +139,24 @@ class ExecutionHistoryTest(unittest.TestCase):
             self.assertIn("8分30秒", markdown)
             self.assertIn("三个难度均完成并产生评分", markdown)
             self.assertIn("更新小程序入口定位", markdown)
+
+    def test_simultaneous_synthetic_starts_preserve_all_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def create(index):
+                return start_execution(
+                    root, automation_id="AUTO-SYNTH", run_id=f"RUN-SYNTH-{index}",
+                    feature="synthetic", environment="local", platforms=["api"],
+                    purpose="lock smoke", objective="no lost runs", scope="read-only",
+                    started_at="2026-10-04T00:00:00+00:00")
+
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                receipts = list(pool.map(create, range(4)))
+            self.assertEqual([item["status"] for item in receipts], ["started"] * 4)
+            data = json.loads((root / ".ai-test/execution_history.json").read_text(encoding="utf-8"))
+            self.assertEqual(data["automations"][0]["execution_count"], 4)
+            self.assertEqual(len(data["automations"][0]["runs"]), 4)
 
     def test_same_run_id_cannot_be_reused_for_another_automation(self):
         with tempfile.TemporaryDirectory() as directory:

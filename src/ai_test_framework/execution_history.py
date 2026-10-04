@@ -7,7 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-import fcntl
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 STATE_PATH = Path(".ai-test/execution_history.json")
@@ -52,12 +55,25 @@ def _write_json(path: Path, value: Dict[str, Any]) -> None:
 def _locked(root: Path):
     lock_path = root / ".ai-test/execution_history.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+", encoding="utf-8") as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    with lock_path.open("a+b") as handle:
+        if os.name == "nt":
+            # msvcrt locks a byte range, so keep a stable byte at offset zero.
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             yield
         finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            if os.name == "nt":
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _escape(value: Any) -> str:

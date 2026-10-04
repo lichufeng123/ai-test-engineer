@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/ai-test/automation-asset-reuse-review.schema.json",
+  "title": "Automation Asset Reuse Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feature",
+    "searches",
+    "candidate_assets",
+    "proposed_changes",
+    "review_confirmed"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "feature": { "type": "string", "minLength": 1 },
+    "searches": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["root", "file_globs", "purpose"],
+        "properties": {
+          "root": { "type": "string", "minLength": 1 },
+          "file_globs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "purpose": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "candidate_assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "covered_capabilities", "decision", "reason"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "covered_capabilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "decision": {
+            "enum": ["reuse", "extend", "reject", "supersede"]
+          },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "proposed_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "change_type", "gap", "based_on"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "change_type": {
+            "enum": ["extend_existing", "new_asset", "archive_only"]
+          },
+          "gap": { "type": "string", "minLength": 1 },
+          "based_on": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "review_confirmed": { "const": true }
+  }
+}

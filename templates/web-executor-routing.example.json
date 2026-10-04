@@ -32,6 +32,13 @@
       "notes": ["首轮探索主工具；复用人工登录态、视觉或语义探索、失败现场复核"]
     },
     {
+      "id": "jev-advisor",
+      "availability": "available",
+      "exact_version": "0.1.0",
+      "roles": ["bounded_read_only_advisory"],
+      "notes": ["首轮探索的建议器；只能从本地有限只读候选动作中选择，Ego Lite执行并回读。结果固定advisory_only"]
+    },
+    {
       "id": "stagehand",
       "availability": "planned",
       "exact_version": null,
@@ -42,6 +49,7 @@
   "routes": {
     "new_feature_discovery": {
       "primary": "ego-lite",
+      "advisor": "jev-advisor",
       "fallbacks": []
     },
     "playwright_locator_assist": {
@@ -72,6 +80,16 @@
     "credentials_runtime_only": true,
     "high_risk_write_requires_approval": true,
     "agentic_output_requires_playwright_validation": true,
+    "jev": {
+      "authority": "advisory_only",
+      "action_space": "finite_local_candidates",
+      "read_only_only": true,
+      "may_execute_actions": false,
+      "may_select_business_target": false,
+      "may_change_expectations": false,
+      "provider_failure": "stop_no_retry",
+      "require_incomplete_terminal": true
+    },
     "stagehand": {
       "allowed_changes": ["locator", "wait_condition", "known_transient_dialog"],
       "forbidden_changes": [

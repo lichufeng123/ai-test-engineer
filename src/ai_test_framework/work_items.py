@@ -66,28 +66,74 @@ def initialize_work_item_index(root: Path) -> Dict[str, Any]:
     else:
         index = {"schema_version": 1, "updated_at": _now(), "items": []}
         _write_json(index_path, index)
+    migrated = False
+    for item in index.get("items", []):
+        item_root = root / item.get("path", f".ai-test/work-items/{item.get('requirement_id', '')}")
+        manifest_path = item_root / "manifest.json"
+        mode = item.get("test_mode", "unclassified")
+        if manifest_path.is_file():
+            try:
+                manifest_mode = _read_json(manifest_path).get("test_mode")
+                mode = manifest_mode if manifest_mode in {"standard", "rapid"} else "unclassified"
+            except (OSError, json.JSONDecodeError):
+                mode = "unclassified"
+        elif mode not in {"standard", "rapid", "unclassified"}:
+            mode = "unclassified"
+        if item.get("test_mode") != mode:
+            item["test_mode"] = mode
+            migrated = True
+    if migrated:
+        _write_json(index_path, index)
     _render_overview(root, index)
     return index
 
 
 def _render_overview(root: Path, index: Dict[str, Any]) -> None:
+    items = sorted(index.get("items", []), key=lambda item: item.get("updated_at", ""), reverse=True)
+    buckets = {
+        "当前标准需求": [],
+        "当前快速测试": [],
+        "当前模式待分类": [],
+        "历史标准需求": [],
+        "历史快速测试": [],
+        "历史模式待分类": [],
+    }
+    active_statuses = {"planned", "active", "blocked"}
+    for item in items:
+        item_root = root / item.get("path", f".ai-test/work-items/{item['requirement_id']}")
+        manifest_path = item_root / "manifest.json"
+        test_mode = "unclassified"
+        if manifest_path.is_file():
+            try:
+                test_mode = _read_json(manifest_path).get("test_mode", "unclassified")
+            except (OSError, json.JSONDecodeError):
+                test_mode = "unclassified"
+        active = item.get("status") in active_statuses
+        if test_mode == "rapid":
+            bucket = "当前快速测试" if active else "历史快速测试"
+        elif test_mode == "standard":
+            bucket = "当前标准需求" if active else "历史标准需求"
+        else:
+            bucket = "当前模式待分类" if active else "历史模式待分类"
+        buckets[bucket].append(item)
+
     lines = [
         "# 测试需求工作台",
         "",
-        "> 该文件由 `ai-test work-item-*` 自动生成。每个需求使用独立任务和独立状态目录。",
-        "",
-        "## 当前需求",
+        "> 该文件由 `ai-test work-item-*` 自动生成，展示全部当前与历史工作项；不可手工维护。",
+        "> 快速测试仍按独立需求/运行留痕，`test_mode=rapid` 只表示正式需求说明、规则和用例产物暂缓，不代表测试思考或执行门禁被跳过。",
         "",
     ]
-    items = sorted(index.get("items", []), key=lambda item: item.get("updated_at", ""), reverse=True)
-    if not items:
-        lines.append("暂无测试需求。使用 `ai-test work-item-create` 创建第一项。")
-    else:
+    for heading, grouped_items in buckets.items():
+        lines.extend([f"## {heading}", ""])
+        if not grouped_items:
+            lines.extend(["暂无。", ""])
+            continue
         lines.extend([
             "| 需求ID | 标题 | 功能 | 状态 | 阶段 | 环境 | 平台 | 最近更新 |",
             "| --- | --- | --- | --- | --- | --- | --- | --- |",
         ])
-        for item in items:
+        for item in grouped_items:
             lines.append(
                 "| {requirement_id} | {title} | {feature} | {status} | {stage} | {environments} | {platforms} | {updated_at} |".format(
                     requirement_id=item["requirement_id"],
@@ -100,12 +146,13 @@ def _render_overview(root: Path, index: Dict[str, Any]) -> None:
                     updated_at=item.get("updated_at", ""),
                 )
             )
+        lines.append("")
     lines.extend([
-        "",
         "## 新任务怎么接手",
         "",
         "在新的 Codex、WorkBuddy 或其他 Agent 任务中只需说：`接手需求 REQ-XXX`。",
         "Agent 必须先运行 `ai-test work-item-show --root . --requirement-id REQ-XXX`，再按返回的文件顺序恢复上下文。",
+        "快速测试使用 `work-item-create --test-mode rapid`，并将章程、探针回执和结果注册到同一工作项；历史项保留在本索引中，不因归档而删除。",
         "",
     ])
     (root / "TEST_WORK_ITEMS.md").write_text("\n".join(lines), encoding="utf-8")
@@ -116,6 +163,7 @@ def _index_entry(manifest: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, A
         "requirement_id": manifest["requirement_id"],
         "title": manifest["title"],
         "feature": manifest["feature"],
+        "test_mode": manifest.get("test_mode", "unclassified"),
         "status": state["status"],
         "stage": state["stage"],
         "environments": manifest["environments"],
@@ -149,6 +197,7 @@ def create_work_item(
     environments: Iterable[str],
     platforms: Iterable[str],
     scope: str,
+    test_mode: str = "standard",
 ) -> Dict[str, Any]:
     root = Path(root)
     _validate_id(requirement_id)
@@ -156,6 +205,8 @@ def create_work_item(
     platforms = _unique(platforms)
     if not title.strip() or not feature.strip() or not scope.strip():
         raise ValueError("title、feature 和 scope 不能为空")
+    if test_mode not in {"standard", "rapid"}:
+        raise ValueError("test_mode 必须为 standard 或 rapid")
     if not environments or not platforms:
         raise ValueError("至少需要一个环境和一个平台")
     item_root = root / ".ai-test/work-items" / requirement_id
@@ -167,10 +218,11 @@ def create_work_item(
         "environments": environments,
         "platforms": platforms,
         "scope": scope.strip(),
+        "test_mode": test_mode,
     }
     if manifest_path.exists():
         existing = _read_json(manifest_path)
-        if any(existing.get(key) != value for key, value in expected_identity.items()):
+        if any(existing.get(key, "standard" if key == "test_mode" else None) != value for key, value in expected_identity.items()):
             raise ValueError(f"需求 {requirement_id} 已存在且元数据不同，请使用 work-item-update")
         return {**show_work_item(root, requirement_id), "status": "exists", "idempotent": True}
 
@@ -234,6 +286,7 @@ def _build_handoff(manifest: Dict[str, Any], state: Dict[str, Any]) -> Dict[str,
         "environments": manifest["environments"],
         "platforms": manifest["platforms"],
         "scope": manifest["scope"],
+        "test_mode": manifest.get("test_mode", "standard"),
         "current_stage": state["stage"],
         "status": state["status"],
         "summary": state["summary"],
@@ -266,6 +319,7 @@ def update_work_item(
     baseline_id: Optional[str] = None,
     baseline_path: Optional[str] = None,
     baseline_sha256: Optional[str] = None,
+    test_mode: Optional[str] = None,
 ) -> Dict[str, Any]:
     root = Path(root)
     _validate_id(requirement_id)
@@ -314,6 +368,10 @@ def update_work_item(
         if not scope.strip():
             raise ValueError("scope 不能为空")
         manifest["scope"] = scope.strip()
+    if test_mode is not None:
+        if test_mode not in {"standard", "rapid"}:
+            raise ValueError("test_mode 必须为 standard 或 rapid")
+        manifest["test_mode"] = test_mode
     if any(value is not None for value in (baseline_id, baseline_path, baseline_sha256)):
         baseline = manifest["official_baseline"]
         if baseline_id is not None:
@@ -373,6 +431,7 @@ def show_work_item(root: Path, requirement_id: str) -> Dict[str, Any]:
         "environments": manifest["environments"],
         "platforms": manifest["platforms"],
         "scope": manifest["scope"],
+        "test_mode": manifest.get("test_mode", "standard"),
         "current_status": state["status"],
         "current_stage": state["stage"],
         "summary": state["summary"],

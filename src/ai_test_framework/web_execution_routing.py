@@ -8,6 +8,7 @@ REQUIRED_TOOL_ROLES = {
     "playwright-mcp": {"locator_generation", "locator_validation"},
     "chrome-devtools-mcp": {"diagnosis", "network", "console", "performance"},
     "ego-lite": {"discovery", "authenticated_exploration", "fallback"},
+    "jev-advisor": {"bounded_read_only_advisory"},
     "stagehand": {"controlled_self_heal"},
 }
 
@@ -171,6 +172,15 @@ def check_web_execution_routing(payload: Dict[str, Any]) -> Dict[str, Any]:
                 f"{route_id}的主工具必须是{expected_primary}",
             )
         references = [route.get("primary"), *_as_list(route.get("fallbacks"))]
+        advisor = route.get("advisor")
+        if route_id == "new_feature_discovery" and advisor != "jev-advisor":
+            collector.add(
+                "JEV_FIRST_ROUND_ADVISOR_REQUIRED",
+                f"$.routes.{route_id}.advisor",
+                "首轮探索必须声明Jev为受限建议器；实际页面动作仍由Ego Lite执行",
+            )
+        if advisor is not None:
+            references.append(advisor)
         for reference in references:
             if isinstance(reference, str) and reference not in tool_map:
                 collector.add(
@@ -224,6 +234,25 @@ def check_web_execution_routing(payload: Dict[str, Any]) -> Dict[str, Any]:
     for key, (code, message) in required_true.items():
         if policies.get(key) is not True:
             collector.add(code, f"$.policies.{key}", message)
+
+    jev = _as_mapping(policies.get("jev"))
+    required_jev_values = {
+        "authority": "advisory_only",
+        "action_space": "finite_local_candidates",
+        "read_only_only": True,
+        "may_execute_actions": False,
+        "may_select_business_target": False,
+        "may_change_expectations": False,
+        "provider_failure": "stop_no_retry",
+        "require_incomplete_terminal": True,
+    }
+    for key, expected in required_jev_values.items():
+        if jev.get(key) != expected:
+            collector.add(
+                "JEV_SAFETY_POLICY_VIOLATION",
+                f"$.policies.jev.{key}",
+                f"Jev策略必须满足 {key}={expected!r}",
+            )
 
     stagehand = _as_mapping(policies.get("stagehand"))
     forbidden = set(_as_list(stagehand.get("forbidden_changes")))

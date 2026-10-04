@@ -30,8 +30,11 @@
 4. `test-case-generate`：唯一正式用例基线、覆盖映射和执行包。
 5. `requirement-grounded-functional-testing`：受控执行、证据、问题定性与报告。
 6. `test-execution-asset-retrospective`：执行结束后的页面、数据、环境和自动化资产反哺。
+7. `rapid-test`：尚无正式基线时的有边界临时探针。
+8. `test-data-and-account-fixture-management`：测试数据和账号 Fixture 的受控生命周期。
+9. `test-omission-risk-retrospective`：遗漏风险规则的审查受控反哺。
 
-用户级 `~/.agents/skills` 与 Codex 兼容目录 `~/.codex/skills` 通过符号链接指向这份唯一源码。插件包由 `plugin-build` 临时生成，不维护第二套 Skill 源码。
+用户可选用 `skills-install` 将通用 Skill 安装到用户级 `~/.agents/skills` 和兼容目录；仓库 `.agents/skills` 是唯一源码。插件包由 `plugin-build` 临时生成，不维护第二套 Skill 源码。
 
 ### 3.1.1 WorkBuddy 中出现两组同名 Skill
 
@@ -40,9 +43,9 @@
 - “用户”：来自 `~/.agents/skills` 的用户级安装。
 - “AI测试工程师”：来自当前仓库 `.agents/skills` 的项目级 Skill。
 
-六个通用 Skill 的用户级入口均为符号链接，最终解析到当前仓库同一份 `SKILL.md`，不是两套需要分别维护的副本。WorkBuddy 按作用域优先使用更具体的项目级 Skill，因此会显示“另有1处同名技能，更具体的一份生效”。这属于正常优先级行为。
+若用户另行安装同名通用 Skill，用户级入口应解析到仓库同一份 `SKILL.md`，不应维护第二套副本。WorkBuddy 按作用域优先使用更具体的项目级 Skill，因此可能同时显示用户级与项目级入口；未执行 `skills-install` 的新同事不会天然具备用户级入口。
 
-当前用户级分类比项目级多一项 `yizhi-requirement-tools-adapter`，它是私有适配入口，不属于公开仓库的六个通用 Skill。在普通业务项目中，如果项目本身没有同名 `.agents/skills`，通常只会显示并使用用户级 Skill。
+用户自行安装的私有适配 Skill 不属于公开仓库的通用 Skill 清单；在普通业务项目中，若项目没有同名 `.agents/skills`，通常会显示用户级 Skill。不要将私有适配器打包到公开交付物。
 
 不要为消除界面重复而删除仓库 `.agents/skills`，它是公开项目的 canonical 源码；删除用户级符号链接则会导致其他项目无法全局发现这些 Skill。开发框架时可直接查看项目级分类，处理其他项目时使用用户级分类。
 

@@ -11,11 +11,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["requirement_id", "title", "feature", "status", "stage", "path"],
+        "required": ["requirement_id", "title", "feature", "test_mode", "status", "stage", "path"],
         "properties": {
           "requirement_id": {"type": "string"},
           "title": {"type": "string"},
           "feature": {"type": "string"},
+          "test_mode": {"enum": ["standard", "rapid", "unclassified"]},
           "status": {"type": "string"},
           "stage": {"type": "string"},
           "environments": {"type": "array", "items": {"type": "string"}},

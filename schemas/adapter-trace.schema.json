@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Domain-neutral read-only adapter receipt chain (not product approval)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "probe", "adapter", "steps"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "probe": {"$ref": "execution-probe.schema.json"},
+    "adapter": {"type": "object", "additionalProperties": false, "required": ["id", "platform", "source"], "properties": {
+      "id": {"type": "string", "minLength": 1},
+      "platform": {"enum": ["web", "api", "app", "h5", "miniapp", "device"]},
+      "source": {"$ref": "#/$defs/artifact"}
+    }},
+    "steps": {"type": "array", "minItems": 6, "maxItems": 6,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "OBSERVED"}}}]},
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "ACTION_GUARDED"}}}]},
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "EXECUTED_ONCE"}}}]},
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "READBACK"}}}]},
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "VERDICT"}}}]},
+        {"allOf": [{"$ref": "#/$defs/step"}, {"properties": {"phase": {"const": "EVIDENCE_REPORT"}}}]}
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "artifact": {"type": "object", "required": ["path", "sha256"], "additionalProperties": false,
+      "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}},
+    "step": {"type": "object", "additionalProperties": false,
+      "required": ["phase", "run_id", "case_id", "fixture_id", "probe_sha256", "adapter_sha256", "previous_sha256", "payload"],
+      "properties": {
+        "phase": {"type": "string"}, "run_id": {"type": "string", "minLength": 1},
+        "case_id": {"type": "string", "minLength": 1}, "fixture_id": {"type": "string", "minLength": 1},
+        "probe_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "adapter_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "previous_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "payload": {"type": "object"}
+      }
+    }
+  }
+}

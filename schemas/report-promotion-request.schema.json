@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Report delivery preflight: synthetic only, never a product acceptance receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mode", "run_id", "guarded_receipt", "privacy_manifest"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mode": {"enum": ["synthetic", "standard"]},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{1,99}$"},
+    "guarded_receipt": {"$ref": "#/$defs/artifact"},
+    "privacy_manifest": {"$ref": "#/$defs/artifact"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    }
+  }
+}

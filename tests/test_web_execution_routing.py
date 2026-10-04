@@ -45,6 +45,12 @@ def valid_plan():
                 "roles": ["discovery", "authenticated_exploration", "fallback"],
             },
             {
+                "id": "jev-advisor",
+                "availability": "available",
+                "exact_version": "0.1.0",
+                "roles": ["bounded_read_only_advisory"],
+            },
+            {
                 "id": "stagehand",
                 "availability": "planned",
                 "exact_version": None,
@@ -54,6 +60,7 @@ def valid_plan():
         "routes": {
             "new_feature_discovery": {
                 "primary": "ego-lite",
+                "advisor": "jev-advisor",
                 "fallbacks": [],
             },
             "playwright_locator_assist": {
@@ -84,6 +91,16 @@ def valid_plan():
             "credentials_runtime_only": True,
             "high_risk_write_requires_approval": True,
             "agentic_output_requires_playwright_validation": True,
+            "jev": {
+                "authority": "advisory_only",
+                "action_space": "finite_local_candidates",
+                "read_only_only": True,
+                "may_execute_actions": False,
+                "may_select_business_target": False,
+                "may_change_expectations": False,
+                "provider_failure": "stop_no_retry",
+                "require_incomplete_terminal": True,
+            },
             "stagehand": {
                 "allowed_changes": ["locator", "wait_condition", "known_transient_dialog"],
                 "forbidden_changes": [
@@ -124,6 +141,24 @@ class WebExecutionRoutingTest(unittest.TestCase):
         blocked = check_web_execution_routing(plan)
         self.assertEqual(blocked["status"], "failed")
         self.assertIn("PLAYWRIGHT_MCP_MUST_BE_OPTIONAL", blocked["error_codes"])
+
+    def test_first_round_uses_jev_as_bounded_advisor_and_ego_lite_as_executor(self):
+        plan = valid_plan()
+        result = check_web_execution_routing(plan)
+        self.assertEqual(result["status"], "passed_with_pending_tools")
+        self.assertEqual(plan["routes"]["new_feature_discovery"]["primary"], "ego-lite")
+        self.assertEqual(plan["routes"]["new_feature_discovery"]["advisor"], "jev-advisor")
+
+        plan["routes"]["new_feature_discovery"].pop("advisor")
+        result = check_web_execution_routing(plan)
+        self.assertIn("JEV_FIRST_ROUND_ADVISOR_REQUIRED", result["error_codes"])
+
+    def test_jev_must_remain_bounded_advisory_and_read_only(self):
+        plan = valid_plan()
+        plan["policies"]["jev"]["may_execute_actions"] = True
+        result = check_web_execution_routing(plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("JEV_SAFETY_POLICY_VIOLATION", result["error_codes"])
 
     def test_formal_regression_cannot_fall_back_to_agentic_executor(self):
         plan = valid_plan()

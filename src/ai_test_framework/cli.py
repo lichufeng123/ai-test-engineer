@@ -5,6 +5,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from .adapter_trace import check_adapter_trace
+from .asset_reuse import check_automation_asset_reuse
+from .automation_outcome import check_automation_outcome
 from .data_factory import generate_fixtures
 from .business_flows import check_business_flows, check_flow_case_coverage
 from .case_quality import check_case_granularity
@@ -13,8 +16,18 @@ from .discovery import plan_discovery
 from .documentation import check_documentation_sync
 from .evidence import check_evidence
 from .execution_readiness import build_readiness_plan, evaluate_execution_readiness
+from .environment_profile import resolve_environment
+from .execution_contract import check_execution_probe, reserve_write_intent
+from .playwright_receipts import collect_playwright_receipts
+from .report_promotion import check_report_promotion
+from .guarded_run import execute_guarded_playwright
+from .synthetic_prepare import prepare_synthetic_guarded_run
+from .evidence_privacy import check_evidence_privacy
+from .knowledge_adapter import audit_local_baseline, audit_local_knowledge
 from .execution_history import finish_execution, start_execution
-from .project import STAGES, initialize_project
+from .exploration_handoff import check_exploration_handoff
+from .project import STAGES, initialize_project, scaffold_playwright
+from .team_doctor import inspect_team_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
 from .video_quality import check_videos
 from .web_execution_routing import check_web_execution_routing
@@ -32,7 +45,7 @@ def _read(path: str):
 
 def _emit(value) -> int:
     print(json.dumps(value, ensure_ascii=False, indent=2))
-    return 0 if value.get("status") not in {"failed", "repair_required", "blocked", "inconsistent"} else 1
+    return 0 if value.get("status") not in {"failed", "repair_required", "blocked", "inconsistent", "review_required"} else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,7 +57,68 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--name", required=True)
     init.add_argument("--system-id", required=True)
     init.add_argument("--environment", action="append", default=[])
-    init.add_argument("--platform", action="append", choices=["web", "app", "h5", "miniapp"], default=[])
+    init.add_argument("--platform", action="append", choices=["web", "api", "app", "h5", "miniapp"], default=[])
+
+    scaffold = commands.add_parser("playwright-scaffold", help="安装无业务连接的分层Web自动化样板（不覆盖）")
+    scaffold.add_argument("--root", default=".")
+
+    doctor = commands.add_parser("doctor", help="只读离线检查团队clone和项目安装；不授权业务执行")
+    doctor.add_argument("--root", default=".", help="ai-test init生成的项目目录")
+    doctor.add_argument("--framework-root", default=".", help="公开框架clone目录")
+    doctor.add_argument("--private-root", help="可选：已有权限的本地知识仓库，只检查manifest哈希")
+    doctor.add_argument("--require-business", action="store_true", help="要求业务执行准备度；M1阶段必然阻塞")
+
+    env_resolve = commands.add_parser("env-resolve", help="比对已审环境画像、现场观测与请求；永不授予写入权限")
+    env_resolve.add_argument("--profile", required=True)
+    env_resolve.add_argument("--observation", required=True)
+    env_resolve.add_argument("--request", required=True)
+
+    probe_check = commands.add_parser("probe-check", help="冻结已有基线Case/临时探针和计划、Oracle、环境、运行ID")
+    probe_check.add_argument("--input", required=True)
+    probe_check.add_argument("--root", default=".")
+
+    intent = commands.add_parser("write-intent-reserve", help="仅为已冻结目标创建一次本地写意图；不执行产品写入")
+    intent.add_argument("--input", required=True)
+    intent.add_argument("--observation", required=True)
+    intent.add_argument("--approval", required=True)
+    intent.add_argument("--root", default=".")
+
+    adapter_trace = commands.add_parser("adapter-trace-check", help="通用只读适配器的逐阶段回执对账；不授予产品通过")
+    adapter_trace.add_argument("--input", required=True)
+    adapter_trace.add_argument("--root", default=".")
+
+    synthetic_prepare = commands.add_parser("synthetic-run-prepare", help="仅本地虚构：基于已保存的run计划生成一次性charter/probe/bundle并启动日志")
+    synthetic_prepare.add_argument("--root", default=".")
+    synthetic_prepare.add_argument("--run-id", required=True)
+    synthetic_prepare.add_argument("--browser-channel", choices=["msedge", "chromium"], default="msedge")
+
+    guarded = commands.add_parser("guarded-web-run", help="仅本地虚构：冻结探针后单次运行Playwright并绑定当轮reporter；不产生产品通过")
+    guarded.add_argument("--input", required=True)
+    guarded.add_argument("--root", default=".")
+
+    reporter_gate = commands.add_parser("playwright-receipts-check", help="从Playwright JSON附件自动对账逐断言回执（仍需语义复核）")
+    reporter_gate.add_argument("--input", required=True)
+    reporter_gate.add_argument("--root", default=".")
+
+    promotion_gate = commands.add_parser("report-promotion-check", help="阻止直接Playwright结果晋升正式报告；仅支持合成运行材料只读核验")
+    promotion_gate.add_argument("--input", required=True)
+    promotion_gate.add_argument("--root", default=".")
+
+    privacy_gate = commands.add_parser("privacy-check", help="离线证据脱敏风险扫描与逐文件人工复核声明校验")
+    privacy_gate.add_argument("--input", required=True)
+    privacy_gate.add_argument("--root", default=".")
+
+    knowledge = commands.add_parser("knowledge-audit", help="只读调用私有本地注册器validate/load并逐文件校验必读哈希；非Current审核")
+    knowledge.add_argument("--private-root", required=True)
+    knowledge.add_argument("--feature", required=True)
+    knowledge.add_argument("--stage", choices=["intake", "requirement", "assertion", "case_design", "readiness", "execution", "triage", "retrospective"], required=True)
+    knowledge.add_argument("--platform", choices=["web", "app", "h5", "miniapp", "api", "device"])
+    knowledge.add_argument("--role")
+    knowledge.add_argument("--module-id", help="试点时必选：要求命中该模块的已登记必读条目")
+
+    local_baseline = commands.add_parser("baseline-snapshot", help="只读核对私有工作项本地基线ID/哈希；不证明飞书Current")
+    local_baseline.add_argument("--private-root", required=True)
+    local_baseline.add_argument("--requirement-id", required=True)
 
     work_create = commands.add_parser("work-item-create", help="为一个测试需求创建独立状态与接手包")
     work_create.add_argument("--root", default=".")
@@ -56,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--platform", action="append", required=True, choices=["web", "app", "h5", "miniapp"], dest="platforms"
     )
     work_create.add_argument("--scope", required=True)
+    work_create.add_argument("--test-mode", choices=["standard", "rapid"], default="standard")
 
     work_show = commands.add_parser("work-item-show", help="读取一个需求并给出新任务接手上下文")
     work_show.add_argument("--root", default=".")
@@ -82,6 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="add_platforms",
     )
     work_update.add_argument("--scope")
+    work_update.add_argument("--test-mode", choices=["standard", "rapid"])
     work_update.add_argument("--baseline-id")
     work_update.add_argument("--baseline-path")
     work_update.add_argument("--baseline-sha256")
@@ -158,6 +234,28 @@ def build_parser() -> argparse.ArgumentParser:
     web_executor.add_argument("--input", required=True)
     web_executor.add_argument("--output", required=True)
 
+    asset_reuse = commands.add_parser(
+        "automation-asset-reuse-check",
+        help="新增或改写自动化脚本前，校验既有资产检索和逐项复用决策",
+    )
+    asset_reuse.add_argument("--input", required=True)
+    asset_reuse.add_argument("--root", default=".")
+    asset_reuse.add_argument("--output", required=True)
+
+    handoff_check = commands.add_parser(
+        "exploration-handoff-check", help="重复执行前校验探索问题、可执行资产和逐断言证据计划/收口"
+    )
+    handoff_check.add_argument("--input", required=True)
+    handoff_check.add_argument("--root", default=".")
+    handoff_check.add_argument("--output", required=True)
+
+    outcome = commands.add_parser(
+        "automation-outcome-check", help="对账逐断言结果、独立Oracle与Playwright真实运行报告"
+    )
+    outcome.add_argument("--input", required=True)
+    outcome.add_argument("--root", default=".")
+    outcome.add_argument("--output", required=True)
+
     skills_check = commands.add_parser("skills-check", help="校验跨客户端 Skill 与插件清单")
     skills_check.add_argument("--root", default=".")
 
@@ -230,11 +328,42 @@ def main(argv=None) -> int:
     if args.command == "init":
         return _emit(initialize_project(Path(args.path), name=args.name, system_id=args.system_id,
                                         environments=args.environment, platforms=args.platform))
+    if args.command == "playwright-scaffold":
+        return _emit(scaffold_playwright(Path(args.root)))
+    if args.command == "doctor":
+        return _emit(inspect_team_project(Path(args.root), Path(args.framework_root),
+                                          private_root=Path(args.private_root) if args.private_root else None,
+                                          require_business=args.require_business))
+    if args.command == "env-resolve":
+        return _emit(resolve_environment(_read(args.profile), _read(args.observation), _read(args.request)))
+    if args.command == "probe-check":
+        return _emit(check_execution_probe(_read(args.input), Path(args.root)))
+    if args.command == "write-intent-reserve":
+        return _emit(reserve_write_intent(_read(args.input), _read(args.observation),
+                                          _read(args.approval), Path(args.root)))
+    if args.command == "adapter-trace-check":
+        return _emit(check_adapter_trace(_read(args.input), Path(args.root)))
+    if args.command == "synthetic-run-prepare":
+        return _emit(prepare_synthetic_guarded_run(Path(args.root), args.run_id, channel=args.browser_channel))
+    if args.command == "guarded-web-run":
+        return _emit(execute_guarded_playwright(_read(args.input), Path(args.root)))
+    if args.command == "playwright-receipts-check":
+        return _emit(collect_playwright_receipts(_read(args.input), Path(args.root)))
+    if args.command == "report-promotion-check":
+        return _emit(check_report_promotion(_read(args.input), Path(args.root)))
+    if args.command == "privacy-check":
+        return _emit(check_evidence_privacy(_read(args.input), Path(args.root)))
+    if args.command == "knowledge-audit":
+        return _emit(audit_local_knowledge(Path(args.private_root), feature=args.feature,
+                                           stage=args.stage, platform=args.platform, role=args.role,
+                                           module_id=args.module_id))
+    if args.command == "baseline-snapshot":
+        return _emit(audit_local_baseline(Path(args.private_root), args.requirement_id))
     if args.command == "work-item-create":
         return _emit(create_work_item(
             Path(args.root), requirement_id=args.requirement_id, title=args.title,
             feature=args.feature, environments=args.environments, platforms=args.platforms,
-            scope=args.scope,
+            scope=args.scope, test_mode=args.test_mode,
         ))
     if args.command == "work-item-show":
         return _emit(show_work_item(Path(args.root), args.requirement_id))
@@ -247,7 +376,7 @@ def main(argv=None) -> int:
             blockers=args.blockers, next_steps=args.next_steps, owner=args.owner,
             add_environments=args.add_environments, add_platforms=args.add_platforms,
             scope=args.scope, baseline_id=args.baseline_id, baseline_path=args.baseline_path,
-            baseline_sha256=args.baseline_sha256,
+            baseline_sha256=args.baseline_sha256, test_mode=args.test_mode,
         ))
     if args.command == "work-item-artifact-register":
         return _emit(register_work_item_artifact(
@@ -330,6 +459,24 @@ def main(argv=None) -> int:
         return _emit(value)
     if args.command == "web-executor-check":
         value = check_web_execution_routing(_read(args.input))
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
+    if args.command == "automation-asset-reuse-check":
+        value = check_automation_asset_reuse(_read(args.input), Path(args.root))
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
+    if args.command == "exploration-handoff-check":
+        value = check_exploration_handoff(_read(args.input), Path(args.root))
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
+    if args.command == "automation-outcome-check":
+        value = check_automation_outcome(_read(args.input), Path(args.root))
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

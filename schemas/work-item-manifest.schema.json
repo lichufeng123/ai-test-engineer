@@ -23,9 +23,10 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": {"enum": ["web", "app", "h5", "miniapp"]}
+      "items": {"enum": ["web", "api", "app", "h5", "miniapp"]}
     },
     "scope": {"type": "string", "minLength": 1},
+    "test_mode": {"enum": ["standard", "rapid"]},
     "official_baseline": {
       "type": "object",
       "required": ["id", "path", "sha256"],

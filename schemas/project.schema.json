@@ -11,7 +11,7 @@
     "environments": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "platforms": {
       "type": "array",
-      "items": {"enum": ["web", "app", "h5", "miniapp"]},
+      "items": {"enum": ["web", "api", "app", "h5", "miniapp"]},
       "uniqueItems": true
     },
     "case_generation": {

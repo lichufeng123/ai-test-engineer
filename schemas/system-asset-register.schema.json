@@ -9,7 +9,7 @@
     "status": {"enum": ["verified", "stale", "missing", "local_unbacked"]},
     "product_version": {"type": "string"},
     "environments": {"type": "array", "items": {"type": "string"}},
-    "platforms": {"type": "array", "items": {"enum": ["web", "app", "h5", "miniapp"]}},
+    "platforms": {"type": "array", "items": {"enum": ["web", "api", "app", "h5", "miniapp"]}},
     "maturity": {"enum": ["L0", "L1", "L2", "L3", "L4"]},
     "last_verified_at": {"type": "string"}
   }

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reviewed environment capability candidate; never a write permit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "status", "stage", "zone", "platform", "organization_view_id", "role_id", "build_id", "capabilities", "reviewed_at", "expires_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_id": {"type": "string", "minLength": 1},
+    "status": {"const": "reviewed"},
+    "stage": {"type": "string", "minLength": 1},
+    "zone": {"type": "string", "minLength": 1},
+    "platform": {"enum": ["web", "app", "h5", "miniapp", "api", "database"]},
+    "organization_view_id": {"type": "string", "minLength": 1},
+    "role_id": {"type": "string", "minLength": 1},
+    "build_id": {"type": "string", "minLength": 1},
+    "capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "reviewed_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "run_id": "RUN-EXAMPLE-001",
+  "mode": "standard",
+  "baseline": {
+    "id": "BL-EXAMPLE-APPROVED-001",
+    "status": "approved",
+    "path": "cases/approved-baseline.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "runner": {
+    "path": "automation/web/tests/example.spec.ts",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "playwright_report": {
+    "path": "automation/web/runs/RUN-EXAMPLE-001/playwright-results.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "assertions": [
+    {
+      "id": "A-EXAMPLE-001",
+      "case_id": "TC-EXAMPLE-001",
+      "fixture_id": "FX-EXAMPLE-001",
+      "test_title": "TC-EXAMPLE-001 concrete outcome",
+      "oracle": {
+        "path": "automation/web/oracles/expected.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "results": [
+    {
+      "id": "A-EXAMPLE-001",
+      "status": "passed",
+      "fixture_verified": true,
+      "oracle_verdict": "passed",
+      "evidence": [
+        {
+          "path": "automation/web/runs/RUN-EXAMPLE-001/evidence/result.png",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "content_review": "passed"
+        }
+      ]
+    }
+  ]
+}

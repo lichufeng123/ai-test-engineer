@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.11.0 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a1 -->
 
 # AI Test Engineer
 
@@ -27,6 +27,12 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 
 The generated package contains `.codex-plugin/plugin.json` and the plugin-required `skills/` directory. Other clients can continue using `.agents/skills/` without installing the plugin. See [skill and plugin distribution](docs/skill-and-plugin-distribution.md).
 
+## Testing entrypoint and rapid mode
+
+`AGENTS.md` is the testing constitution and task-routing index, not merely a Skill list. For every task, also load the project knowledge routes in [the testing context index](docs/TEST_CONTEXT_INDEX.md): system maps, approved business rules, omission risks, the single official case baseline, reusable execution assets, and current run receipts. All modes follow [the test-engineer reasoning protocol](docs/TEST_ENGINEER_REASONING.md). First-round Web discovery uses Ego Lite for observation/actions and Jev as a bounded read-only advisor; see the [browser stack contract](docs/web-ai-browser-stack.md). For workflow improvements grounded in system identification, observability, feedback, and stability, see [the Engineering Cybernetics mapping](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md).
+
+Every new test task must have a saved test-plan package before its first page/API/device action. Standard tasks use the approved scope/case baseline, automation-readiness plan, and pre-execution confirmation; rapid tasks use a provisional rapid charter plus versioned probes. Rapid testing may defer only the formal requirement specification, reviewed BF/A rule production, and formal case generation; it must still load current knowledge and omission-risk rules, and it does not generate or approve formal test cases or a new baseline. It still requires risk analysis, assertion/fixture/independent-oracle freeze before consequential actions, evidence, and triage. Results are provisional, not full acceptance or release-gate outcomes. Follow `.agents/skills/rapid-test/SKILL.md` and use [the rapid charter template](templates/rapid-test-charter.example.json) with [its schema](schemas/rapid-test-charter.schema.json).
+
 ## Quick start
 
 ```bash
@@ -48,7 +54,7 @@ ai-test work-item-create --root ./my-test-project \
   --environment sit --platform web --scope "Approved test scope"
 ```
 
-In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` is the human-readable project index. Extend an existing requirement to a new environment or platform with `work-item-update --add-environment <env> --add-platform app --scope <incremental-scope>` instead of creating a second work item.
+In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` indexes current and historical standard requirements, rapid-test work items, and legacy items awaiting mode classification; do not infer a legacy mode from its title. Create rapid work items with `--test-mode rapid`. Extend an existing requirement to a new environment or platform with `work-item-update --add-environment <env> --add-platform app --scope <incremental-scope>` instead of creating a second work item.
 
 Every generated requirement, rule, case, handoff, or report artifact is registered with `work-item-artifact-register`, including its stable artifact ID, path, SHA-256, review status, and workflow stage. `work-item-reconcile` detects missing or changed files, state that lags behind artifacts, unregistered legacy outputs, and attempts to enter `CASE_DESIGN` without an automation-readiness plan and validated rule-review receipt. See the [Chinese user guide](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md).
 
@@ -97,6 +103,49 @@ ai-test readiness-check \
 
 The readiness receipt separates ready cases from cases blocked by missing roles, fixtures, execution targets, or hardware fixtures. Mobile and hardware-in-the-loop plans declare `execution_target_requirements` and `hardware_fixture_requirements`; only targets with a completed capability check are confirmed as available. Blocked cases are recorded once and are not retried until their prerequisite fingerprint changes; ready cases continue.
 
+Before creating or substantially rewriting an automation script, inventory existing scripts, page objects, shared helpers, package commands, and registered execution assets with the [asset reuse review template](templates/automation-asset-reuse-review.example.json). Record a reuse, extension, rejection, or supersession decision for every discovered candidate, then run:
+
+```bash
+ai-test automation-asset-reuse-check \
+  --input ./runs/latest/automation-asset-reuse-review.json \
+  --root . \
+  --output ./runs/latest/automation-asset-reuse-receipt.json
+```
+
+Undispositioned assets, new scripts without a reuse basis, and unconfirmed reviews block the gate. Registering an `automation_script` also requires a validated or approved reuse receipt from the same run, so one business flow cannot silently acquire competing implementations.
+
+## Exploration-to-automation handoff (including rapid repeats)
+
+First-pass AI browser exploration must answer concrete automation questions (identity, stable locators, independent oracle, safe action boundary, waiting and evidence). A run-local method JSON or repeated AI clicks is not an executable test. Before repeating the same feature, validate a reviewed official-package runner, independent oracle, execution receipt bound to the runner hash, remote backup revision/hash, and a continuous-video/error-screenshot plan:
+
+```bash
+ai-test exploration-handoff-check \
+  --input runs/current/exploration-handoff.json --root . \
+  --output runs/current/exploration-handoff-receipt.json
+```
+
+The [contract](schemas/exploration-handoff.schema.json) and [example](templates/exploration-handoff.example.json) support preflight and closure. At closure, require actual video and screenshot files with assertion-bound semantic review: a screenshot of a pending dialog does not prove an error notification. A blocked receipt prohibits calling a repeat an automated regression, even in rapid mode; bounded read-only exploration or separately authorized recovery is still possible. This gate checks local artifact identity and review attestations, not human review truth, business authorization, an approved case baseline or product acceptance.
+
+## Offline team clone check (initial M1)
+
+From the public framework clone, run `ai-test playwright-scaffold --root ./my-test-project` for a synthetic project and `ai-test doctor --framework-root . --root ./my-test-project`. Optionally specify `--private-root <authorized-local-clone>` to check local manifest paths and hashes without connecting to a server. The doctor never installs dependencies, launches a browser, accesses secrets, or authorizes a business write. A passing exit code certifies only static installation health; run a separate synthetic Playwright smoke test for actual browser availability. `--require-business` blocks until the M2–M5 runtime, current knowledge, authorization, and action guards exist. Windows CLI support is not yet verified.
+
+## Local execution-chain delivery
+
+The in-development `env-resolve`, `probe-check`, `write-intent-reserve`, `playwright-receipts-check`, and `privacy-check` commands provide offline identity consistency, single-Case freezing, synthetic-only write intent reservation, Playwright reporter reconciliation and conservative evidence screening. The new `synthetic-run-prepare` creates a fresh local counter charter/probe/bundle from an already saved run plan, then `guarded-web-run` binds these local prerequisites to a single real Playwright process and fresh reporter, but only for the unmodified synthetic starter; a consistent run exits nonzero as `review_required` until evidence semantics are reviewed. `report-promotion-check` additionally rejects Playwright-only outcomes lacking the same guarded run and complete per-file privacy review; even a consistent synthetic run still needs human review, and standard/business promotion is blocked without a trusted Current/authorization adapter. `knowledge-audit` and `baseline-snapshot` validate hashes in an explicitly authorized local private clone, without claiming remote Current. None authenticates a product expectation or grants a real business write. See [delivery scope, synthetic browser receipts and blockers](docs/TEAM_EXECUTION_DELIVERY.md) and the [CI report-gate adoption checklist](docs/CI_REPORT_GATE_ADOPTION.md).
+
+## Team clone and install (0.13.0a1 preview branch)
+
+Follow the [Git clone quickstart](docs/TEAM_CLONE_QUICKSTART.md) for the independent preview branch, version check, full offline tests and synthetic API onboarding. A separate [offline kit procedure](docs/TEAM_PREVIEW_INSTALL.md) is available when an audited wheel is provided. Do not assume this branch is the default or a tagged stable Release. No product-adapter authorization or business-result promotion is included.
+
+## Domain-neutral read-only adapter contract
+
+`ai-test adapter-trace-check --input <trace.json> --root <project>` validates a project-supplied, six-phase read-only receipt chain against its own frozen probe, adapter source, fixture, Oracle and evidence. It neither loads the adapter nor hardcodes any business Case ID; even consistent materials return `review_required`, never product acceptance. See [adapter contract](docs/ADAPTER_CONTRACT.md). A separate Python SDK runs explicit, read-only callbacks only for `local/synthetic` projects; the two independent [fictional adapter sources](examples/synthetic_adapter_projects/) are exercised in the test suite. The existing synthetic counter runner remains only an installable browser demonstration, not a general product executor.
+
+## Team Web automation starter and assertion outcome gate
+
+`ai-test playwright-scaffold --root ./my-test-project` installs a non-destructive, synthetic Playwright sample with a pinned `package-lock.json`, separating page objects, flows, pure oracles, and tests. Review the lockfile and install dependencies through the approved package source; save a run-specific plan using [`templates/synthetic-run-test-plan.example.md`](templates/synthetic-run-test-plan.example.md) before `synthetic-run-prepare`. After a real run, `ai-test automation-outcome-check --input <run-outcome.json> --root <project> --output <receipt.json>` reconciles stable assertion IDs, artifact hashes, evidence review, and the actual Playwright JSON reporter. A swallowed assertion failure, skipped/failed test claimed as passed, or missing evidence blocks the gate; a passing receipt is not proof of product acceptance. Read the [team architecture and boundaries](docs/TEAM_AUTOMATION_ARCHITECTURE.md) before adapting it. No credentials or private business rules are included.
+
 ## Guarded AI browser stack
 
 Web regression keeps Playwright Test as the only formal executor. Ego Lite is the default first-pass discovery tool and handles authenticated or visual exploration; Playwright MCP is optional assistance for generating or validating locators, not a prerequisite for writing Playwright scripts; Chrome DevTools MCP diagnoses network, console, and performance failures; Stagehand may only propose locator, wait-condition, or known-dialog repairs. Every agentic result returns to Playwright for a focused verification and impact regression, and no tool may change approved expectations.
@@ -123,15 +172,15 @@ Every automation run is registered before its first test action and closed after
 
 ```bash
 ai-test execution-log-start \
-  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
-  --feature "Smart Earphone Web" --environment sit --platform web \
+  --root . --automation-id fictional-catalog-web --run-id RUN-SYNTH-001 \
+  --feature "Fictional Catalog Web" --environment sit --platform web \
   --purpose "release gate" --objective "validate the core workflow" \
   --scope "search, filters, pagination, and navigation"
 
 ai-test execution-log-finish \
-  --root . --run-id RUN-20260920-001 --status passed \
+  --root . --run-id RUN-SYNTH-001 --status passed \
   --summary "approved scope passed" --report reports/sit.md \
-  --evidence runs/RUN-20260920-001/evidence-manifest.json
+  --evidence runs/RUN-SYNTH-001/evidence-manifest.json
 ```
 
 The machine state lives in `.ai-test/execution_history.json`. Never include credentials, cookies, tokens, or customer data in either record.

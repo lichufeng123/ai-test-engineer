@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "plan_id": "RTP-EXAMPLE-001",
+  "run_id": "RUN-EXAMPLE-001",
+  "mode": "rapid_test",
+  "status": "draft",
+  "feature": "目标功能",
+  "environment": "sit",
+  "platforms": ["web"],
+  "timebox_minutes": 30,
+  "test_intent": "证明指定角色能否在目标状态下完成只读核对，并由独立来源验证记录身份。",
+  "knowledge_context": [
+    {
+      "source_ref": "knowledge/modules/example/business-topology.md",
+      "kind": "system_knowledge",
+      "authority": "reviewed_method",
+      "sha256": null,
+      "read_status": "read",
+      "applicability": "恢复目标页面上下游和记录标识。"
+    },
+    {
+      "source_ref": "approved requirement or baseline reference",
+      "kind": "approved_baseline",
+      "authority": "approved",
+      "sha256": null,
+      "read_status": "unavailable",
+      "applicability": "正式预期缺失时，不得推断为正式通过。"
+    }
+  ],
+  "scope": {
+    "included": ["目标角色只读查看和身份核对"],
+    "excluded": ["新增或修改业务数据", "生产环境不可逆操作"]
+  },
+  "risk_hypotheses": [
+    {
+      "risk_id": "RISK-EXAMPLE-001",
+      "statement": "页面记录可能与目标业务实体不一致，导致表面展示正确但验证错对象。",
+      "impact": "high",
+      "likelihood": "medium",
+      "priority": 1
+    }
+  ],
+  "authorization": {
+    "write_policy": "read_only",
+    "approved_actions": ["读取页面和独立只读数据来源"],
+    "forbidden_actions": ["新增、编辑、删除和发送通知"],
+    "authorization_ref": null
+  },
+  "probes": [
+    {
+      "probe_id": "P-001",
+      "revision": 1,
+      "risk_id": "RISK-EXAMPLE-001",
+      "status": "draft",
+      "frozen_sha256": null,
+      "preconditions": ["运行环境和登录角色已核对"],
+      "target_identity": "使用稳定业务ID或经验证的复合唯一键，不使用待测字段作为主定位条件。",
+      "assertions": [
+        {
+          "assertion_id": "A-TEMP-001",
+          "expected": "页面目标记录与独立来源指向同一业务实体。",
+          "directly_observable": true
+        }
+      ],
+      "fixture": {
+        "source": "现有受控测试数据",
+        "unique_locator": "在动作前冻结稳定业务标识或已证唯一的复合键。",
+        "scope": "指定环境、角色和组织范围。",
+        "expected_state": "记录存在且满足本探针前置条件。"
+      },
+      "oracle": {
+        "source": "与被测页面独立的只读权威来源",
+        "independent_from_sut": true,
+        "independence_rationale": "独立来源使用同一业务ID确认实体身份，不复用被测页面的派生展示。"
+      },
+      "action": {
+        "description": "只读查看并分别采集页面和独立来源证据。",
+        "mutation_class": "read_only",
+        "approved_by_user": true
+      },
+      "evidence_plan": ["动作前身份与环境", "页面记录", "独立来源回读", "对照结果"],
+      "stop_and_recovery": "零命中、多命中或身份不一致时停止，不选择最新记录；只保存脱敏证据。"
+    }
+  ],
+  "result_authority": "provisional",
+  "stop_conditions": ["目标Fixture无法唯一定位", "独立Oracle不可用", "发现未授权写入或隐私数据"],
+  "upgrade_triggers": ["发现缺陷", "命中关键业务规则缺口", "用于发布/验收或重复回归"],
+  "technical_debt": {
+    "owner": null,
+    "due_date": null,
+    "follow_up": null
+  },
+  "created_at": "2026-09-23T00:00:00+08:00",
+  "updated_at": "2026-09-23T00:00:00+08:00"
+}

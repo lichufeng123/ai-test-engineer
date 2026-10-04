@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.11.0 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a1 -->
 
 # AI Test Engineer
 
@@ -7,6 +7,10 @@
 AI Test Engineer 是一套可移植、以证据为先的 AI 测试工程框架。它把需求理解、系统与功能探索、已审核测试用例、测试数据、自动化执行、证据复核、测试报告和执行资产反哺连接为一条稳定流程。
 
 核心仅依赖 Python 标准库、Markdown 和 JSON Schema，可供不同 AI 助手及人工测试工程师共同使用。Playwright Test、Playwright MCP、Chrome DevTools MCP、Ego Lite、Stagehand、agent-device、Minium 等能力通过适配器接入，不改变正式需求、业务规则和测试用例的唯一基线。
+
+## 同事从 Git 克隆预览分支
+
+先按[同事克隆与安装说明](docs/TEAM_CLONE_QUICKSTART.md)取得 `release/ai-test-engineer-0.13.0a1`、隔离安装并完成版本、单测和虚构 API 项目健康检查。当前是独立预览分支，不等于默认分支或正式业务发布；没有产品写入授权或报告晋升。
 
 ## 跨客户端 Skill 与可选插件
 
@@ -26,6 +30,44 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 ```
 
 生成目录包含插件要求的 `.codex-plugin/plugin.json` 和 `skills/`。其他客户端继续直接使用 `.agents/skills/`，无需安装插件。完整边界见[跨客户端 Skill 与插件分发](docs/skill-and-plugin-distribution.md)。
+
+## 测试工程师入口与快速测试
+
+`AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。开始测试还要按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取项目已有系统知识、已审核规则、遗漏风险、正式基线、执行资产和当前运行回执；每个模式遵循 [测试工程师思维协议](docs/TEST_ENGINEER_REASONING.md)。首轮 Web 探索由 Ego Lite 执行，并由 Jev 在受限只读候选动作中提供建议；[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
+
+每个新测试任务必须在首次页面/API/设备动作前保存测试计划包。标准模式以批准范围/用例基线、自动化准备度计划和执行前确认组成；快速模式以临时快速测试章程和版本化探针组成。快速测试只暂缓正式需求说明、BF/A规则审核和正式用例生成；仍须加载当前知识与遗漏风险规则，不会自行生成或批准正式用例，也不创建新基线。风险分析、关键动作前冻结断言/Fixture/独立Oracle、证据和问题定性仍必须执行。结果是临时结论，不得充当完整验收或发布门禁。按 `.agents/skills/rapid-test/SKILL.md` 执行，并使用[快速测试章程模板](templates/rapid-test-charter.example.json)及[Schema](schemas/rapid-test-charter.schema.json)。
+
+## 首轮探索到可重复自动化的交接
+
+首轮Ego探索必须先列“为脚本化需要解决什么”：稳定身份和定位、独立Oracle、可安全停止/恢复的动作、等待条件、连续录屏及错误提示截图。run-local方法JSON、截图和聊天记录不是可执行测试。同功能重复执行前必须校验正式资产包中的runner、Oracle、与代码哈希绑定的测试回执、远端备份修订与连续录屏/错误截图计划：
+
+```bash
+ai-test exploration-handoff-check --input runs/current/exploration-handoff.json \
+  --root . --output runs/current/exploration-handoff-receipt.json
+```
+
+[契约](schemas/exploration-handoff.schema.json)、[示例](templates/exploration-handoff.example.json)支持执行前与收口两阶段。收口还需核对视频文件、内容及逐断言截图中目标提示是否真的可见；只有弹窗“待导入”的截图不能证明错误提示。rapid重复执行门禁阻塞时不得宣称自动化回归，仍可另行计划只读诊断或经单独授权的应急恢复。本门禁只检验本地资产和复核声明，不替代业务写入授权、人审真实性、正式用例基线或产品验收。
+
+## 团队 clone 后离线检查（M1 初版）
+
+在已初始化的虚构项目上、从公开框架 clone 目录运行：
+
+```bash
+ai-test playwright-scaffold --root ./my-test-project
+ai-test doctor --framework-root . --root ./my-test-project
+# 已获权的本地知识包可选：--private-root <private-clone>
+# 要求真正业务执行准备度时：--require-business（本阶段必然阻塞）
+```
+
+`doctor` 只读检查公开框架、项目配置、Python/Node/npm、样板与本地 Playwright 依赖，并可对指定的知识 manifest 做路径/哈希初检；不安装软件、不打开浏览器、不访问网络、不读取凭据。退出码 0 仅表示静态安装检查通过，浏览器仍须单独跑虚构烟测。没有私有包也不代表有当前业务知识；即使静态检查通过，业务执行仍缺 M2–M5 的 Current、环境身份、授权、逐动作门禁与证据闭环。当前 Windows CLI 支持未验证，不能仅凭该命令宣称跨平台可用。
+
+## 当前执行链交付与边界
+
+本地开发中的 `env-resolve`、`probe-check`、`write-intent-reserve`、`playwright-receipts-check`、`privacy-check` 分别处理环境一致性、原 Case/计划冻结、仅虚构本地写意图、Playwright reporter 自动回执与证据隐私预检。新增 `knowledge-audit` 与 `baseline-snapshot` 对已授权本地私有仓库做只读哈希核验，不判断远端 Current。命令均不能单独证明业务事实；真实环境写入在当前 `write-intent-reserve` 中明确阻塞。完整调用顺序、Schema、两轮本地浏览器正负控及未完成项见 [团队执行链交付说明](docs/TEAM_EXECUTION_DELIVERY.md)。
+
+## 团队 Web 自动化样板与逐断言结果门禁
+
+`ai-test playwright-scaffold --root ./my-test-project` 安装不覆盖既有文件的虚构 Playwright 分层样板：PO 只负责页面动作与读取，Flow 编排步骤，Oracle 从独立输入计算预期，测试用例直接抛出失败。真实运行后用 `ai-test automation-outcome-check --input <运行结果输入.json> --root <项目> --output <回执.json>` 对账原子断言、哈希、证据复核状态和 Playwright JSON reporter；脚本吞掉失败、跳过/失败却声明通过或缺证据均阻塞。门禁通过不等于产品验收。使用前先读[团队架构与边界](docs/TEAM_AUTOMATION_ARCHITECTURE.md)；样板不含账号和真实业务规则。
 
 ## 快速开始
 
@@ -48,7 +90,7 @@ ai-test work-item-create --root ./my-test-project \
   --environment sit --platform web --scope "本轮测试范围"
 ```
 
-之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供全部需求的人类可读总览。
+之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供当前与历史标准需求、快速测试及待分类旧任务的人类可读分区总览；快速任务创建时显式指定 `--test-mode rapid`，旧记录不根据标题猜测。
 
 需求、规则、用例、执行包或报告产出后，使用 `work-item-artifact-register` 登记稳定产物ID、路径、SHA-256、审核状态和对应阶段；登记后工作项阶段自动推进。`work-item-reconcile` 对账文件缺失、哈希变化、状态落后、历史孤立产物以及 `CASE_DESIGN` 前的准备度计划和规则审核回执，避免“对话里已生成、工作项仍显示未生成”。
 
@@ -112,6 +154,17 @@ ai-test readiness-check \
 
 实际执行前重新确认功能、环境、适用用例、账号角色、fixture和排除项。移动端和实体设备测试还可声明 `execution_target_requirements` 与 `hardware_fixture_requirements`，并把能力检查通过的手机、模拟器和外设绑定到具体用例。缺账号、数据、执行目标或硬件只阻塞受影响用例并登记一次；相同前置指纹未变化前不重复尝试，其他已就绪用例继续执行。
 
+新增或大幅改写自动化脚本前，先按[资产复用审计模板](templates/automation-asset-reuse-review.example.json)检索现有脚本、Page Object、共享 helper、包命令和资产登记，并逐项说明复用、扩展、拒绝或替代原因：
+
+```bash
+ai-test automation-asset-reuse-check \
+  --input ./runs/latest/automation-asset-reuse-review.json \
+  --root . \
+  --output ./runs/latest/automation-asset-reuse-receipt.json
+```
+
+发现但未处置的资产、无复用基础的新脚本或未确认审计会直接阻塞；登记 `automation_script` 时还必须存在同一运行的已校验复用回执，避免同一业务流程产生竞争脚本。
+
 ## 受控Web AI浏览器工具栈
 
 Web正式回归只使用Playwright Test。Ego Lite负责首轮语义/视觉探索和复用人工登录态；Playwright MCP只按需辅助生成或复核定位器，不是编写Playwright脚本的前置条件；Chrome DevTools MCP负责网络、Console和性能诊断，Stagehand只允许提出定位器、等待条件和已知瞬态弹窗修复。所有AI结果必须回到Playwright单用例验证与影响回归，任何工具都不得修改已审核预期。
@@ -138,15 +191,15 @@ agent-device必须固定精确版本；真机标识、Bundle ID和凭据仅在�
 
 ```bash
 ai-test execution-log-start \
-  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
-  --feature "智能耳机 Web" --environment sit --platform web \
+  --root . --automation-id fictional-catalog-web --run-id RUN-SYNTH-001 \
+  --feature "虚构目录查询 Web" --environment sit --platform web \
   --purpose "发布前回归门禁" --objective "确认核心流程可进入下一环境" \
   --scope "搜索、筛选、分页和页面跳转" --baseline "approved-cases@sha256:..."
 
 ai-test execution-log-finish \
-  --root . --run-id RUN-20260920-001 --status passed \
+  --root . --run-id RUN-SYNTH-001 --status passed \
   --summary "纳入范围全部通过" --report reports/sit.md \
-  --evidence runs/RUN-20260920-001/evidence-manifest.json \
+  --evidence runs/RUN-SYNTH-001/evidence-manifest.json \
   --asset-change "更新新版入口定位"
 ```
 

@@ -26,6 +26,8 @@ SKILL_NAMES = {
     "requirement-grounded-functional-testing",
     "test-execution-asset-retrospective",
     "test-omission-risk-retrospective",
+    "rapid-test",
+    "test-data-and-account-fixture-management",
 }
 
 
@@ -92,6 +94,51 @@ class PortableSkillLayoutTest(unittest.TestCase):
                     (output / "skills" / name / "SKILL.md").read_bytes(),
                     (ROOT / ".agents/skills" / name / "SKILL.md").read_bytes(),
                 )
+
+    def test_rapid_test_preserves_test_engineer_reasoning_and_provisional_authority(self):
+        skill = (ROOT / ".agents/skills/rapid-test/SKILL.md").read_text(encoding="utf-8")
+        for required in (
+            "独立 Oracle",
+            "动作前",
+            "临时结论",
+            "正式需求说明书",
+            "待审核区",
+            "零命中",
+            "多命中",
+        ):
+            self.assertIn(required, skill)
+
+        workflow = (ROOT / ".agents/skills/ai-test-workflow/SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("rapid-test", workflow)
+        self.assertIn("Skills 不是业务知识索引", workflow)
+
+    def test_rapid_charter_template_encodes_context_oracle_and_provisional_result(self):
+        schema = json.loads((ROOT / "schemas/rapid-test-charter.schema.json").read_text(encoding="utf-8"))
+        template = json.loads((ROOT / "templates/rapid-test-charter.example.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(schema["properties"]["mode"]["const"], "rapid_test")
+        self.assertEqual(schema["properties"]["result_authority"]["const"], "provisional")
+        self.assertIn("knowledge_context", template)
+        self.assertIn("risk_hypotheses", template)
+        probe = template["probes"][0]
+        self.assertTrue(probe["oracle"]["independent_from_sut"])
+        self.assertIn("assertions", probe)
+        self.assertIn("fixture", probe)
+        self.assertEqual(probe["status"], "draft")
+
+    def test_agent_guide_routes_project_knowledge_and_reasoning_before_skills(self):
+        agent_guide = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        context_index = (ROOT / "docs/TEST_CONTEXT_INDEX.md").read_text(encoding="utf-8")
+        reasoning = (ROOT / "docs/TEST_ENGINEER_REASONING.md").read_text(encoding="utf-8")
+
+        for required in ("knowledge/INDEX.md", "knowledge/manifest.json", "遗漏风险", "独立 Oracle"):
+            self.assertIn(required, agent_guide)
+        for required in ("系统知识", "已审核业务规则", "测试设计风险", "执行资产", "required_reads"):
+            self.assertIn(required, context_index)
+        for required in ("测试意图", "风险假设", "Fixture", "Oracle", "假阳性"):
+            self.assertIn(required, reasoning)
 
     def test_public_skills_do_not_embed_private_runtime_details(self):
         forbidden = {

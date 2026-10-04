@@ -190,6 +190,24 @@ def register_work_item_artifact(
         raise FileNotFoundError(f"产物不存在或不是文件：{artifact_path}")
 
     registry = initialize_artifact_registry(root, requirement_id)
+    if artifact_type == "automation_script":
+        acceptable = {"validated", "approved"}
+        reuse_receipt = next(
+            (
+                item
+                for item in registry.get("artifacts", [])
+                if item.get("artifact_type") == "automation_asset_reuse_receipt"
+                and item.get("status") in acceptable
+                and (run_id is None or item.get("run_id") == run_id)
+                and _resolve_artifact_path(root, item["path"]).is_file()
+                and _sha256(_resolve_artifact_path(root, item["path"])) == item.get("sha256")
+            ),
+            None,
+        )
+        if reuse_receipt is None:
+            raise ValueError(
+                "automation_asset_reuse_receipt_required:新增或更新自动化脚本前必须登记同一运行的已校验资产复用回执"
+            )
     now = _now()
     previous = next(
         (item for item in registry.get("artifacts", []) if item.get("artifact_id") == artifact_id),

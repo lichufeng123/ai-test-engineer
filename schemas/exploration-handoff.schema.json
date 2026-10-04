@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Exploration-to-automation handoff and evidence gate",
+  "type": "object",
+  "required": ["schema_version", "feature", "run_id", "phase", "purpose", "mode", "questions", "runner", "oracle", "evidence_plan"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "feature": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "phase": {"enum": ["preflight", "closure"]},
+    "purpose": {"enum": ["first_exploration", "repeat_execution"]},
+    "mode": {"enum": ["rapid", "standard"]},
+    "questions": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "unknown", "status"], "properties": {"id": {"type": "string"}, "unknown": {"type": "string"}, "status": {"enum": ["implemented", "blocked", "not_applicable"]}, "reason": {"type": "string"}, "asset": {"$ref": "#/$defs/file"}}}},
+    "runner": {"allOf": [{"$ref": "#/$defs/file"}, {"type": "object", "required": ["validation_receipt", "remote_backup_receipt"], "properties": {"validation_receipt": {"$ref": "#/$defs/file"}, "remote_backup_receipt": {"$ref": "#/$defs/file"}}}]},
+    "oracle": {"$ref": "#/$defs/file"},
+    "evidence_plan": {"type": "object", "required": ["video", "error_capture", "assertion_ids"], "properties": {"video": {"const": "continuous_on"}, "error_capture": {"const": "on_visible_notice"}, "assertion_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}},
+    "evidence": {"type": "object", "properties": {"videos": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/file"}, {"type": "object", "required": ["quality", "semantic_review"], "properties": {"quality": {"enum": ["passed", "failed", "blocked"]}, "semantic_review": {"enum": ["passed", "failed", "blocked"]}}}]}}, "screenshots": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/file"}, {"type": "object", "required": ["assertion_id", "content_review"], "properties": {"assertion_id": {"type": "string"}, "kind": {"enum": ["result", "error_notice"]}, "content_review": {"enum": ["passed", "failed", "blocked"]}, "prompt_visible": {"type": "boolean"}}}]}}}}
+  },
+  "allOf": [{"if": {"properties": {"phase": {"const": "closure"}}}, "then": {"required": ["evidence"]}}],
+  "$defs": {"file": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}}
+}

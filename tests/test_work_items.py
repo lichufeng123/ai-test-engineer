@@ -16,7 +16,12 @@ from ai_test_framework.work_item_artifacts import (
     reconcile_work_item,
     register_work_item_artifact,
 )
-from ai_test_framework.work_items import create_work_item, show_work_item, update_work_item
+from ai_test_framework.work_items import (
+    create_work_item,
+    initialize_work_item_index,
+    show_work_item,
+    update_work_item,
+)
 
 
 class WorkItemTest(unittest.TestCase):
@@ -36,7 +41,69 @@ class WorkItemTest(unittest.TestCase):
             )
             self.assertEqual(index["items"], [])
             self.assertFalse((root / ".ai-test/workflow_state.json").exists())
-            self.assertIn("暂无测试需求", (root / "TEST_WORK_ITEMS.md").read_text(encoding="utf-8"))
+            self.assertIn("## 当前标准需求", (root / "TEST_WORK_ITEMS.md").read_text(encoding="utf-8"))
+
+    def test_work_item_index_separates_current_history_and_rapid_tasks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_work_item(
+                root,
+                requirement_id="REQ-HISTORY",
+                title="历史回归",
+                feature="历史功能",
+                environments=["sit"],
+                platforms=["web"],
+                scope="历史范围",
+            )
+            update_work_item(root, requirement_id="REQ-HISTORY", status="cancelled")
+            create_work_item(
+                root,
+                requirement_id="REQ-RAPID",
+                title="快速探索",
+                feature="快速功能",
+                environments=["sit"],
+                platforms=["web"],
+                scope="限时只读探索",
+                test_mode="rapid",
+            )
+
+            index = json.loads(
+                (root / ".ai-test/work-items/index.json").read_text(encoding="utf-8")
+            )
+            rapid_item = next(item for item in index["items"] if item["requirement_id"] == "REQ-RAPID")
+            self.assertEqual(rapid_item["test_mode"], "rapid")
+            overview = (root / "TEST_WORK_ITEMS.md").read_text(encoding="utf-8")
+            self.assertIn("## 当前快速测试", overview)
+            self.assertIn("REQ-RAPID", overview)
+            self.assertIn("## 历史标准需求", overview)
+            self.assertIn("REQ-HISTORY", overview)
+            self.assertIn("## 历史快速测试", overview)
+            self.assertIn("test_mode=rapid", overview)
+
+    def test_legacy_work_items_without_mode_are_not_misclassified_as_standard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_work_item(
+                root,
+                requirement_id="REQ-LEGACY",
+                title="旧工作项",
+                feature="旧功能",
+                environments=["sit"],
+                platforms=["web"],
+                scope="历史范围",
+            )
+            manifest_path = root / ".ai-test/work-items/REQ-LEGACY/manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest.pop("test_mode")
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+            index = initialize_work_item_index(root)
+
+            entry = next(item for item in index["items"] if item["requirement_id"] == "REQ-LEGACY")
+            self.assertEqual(entry["test_mode"], "unclassified")
+            overview = (root / "TEST_WORK_ITEMS.md").read_text(encoding="utf-8")
+            self.assertIn("## 当前模式待分类", overview)
+            self.assertIn("REQ-LEGACY", overview)
 
     def test_create_work_item_writes_complete_isolated_context_package(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -371,6 +438,58 @@ class WorkItemTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "已存在"):
                 create_work_item(root, **{**kwargs, "title": "冲突标题"})
 
+    def test_automation_script_registration_requires_validated_reuse_receipt_for_same_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            create_work_item(
+                root,
+                requirement_id="REQ-ASSET-REUSE",
+                title="自动化资产复用",
+                feature="员工表现",
+                environments=["sit"],
+                platforms=["web"],
+                scope="只读一致性",
+            )
+            script = root / "features/employee-performance.spec.ts"
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text("// incremental automation\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "automation_asset_reuse_receipt_required"):
+                register_work_item_artifact(
+                    root,
+                    requirement_id="REQ-ASSET-REUSE",
+                    artifact_id="AUTO-EMPLOYEE-001",
+                    artifact_type="automation_script",
+                    path="features/employee-performance.spec.ts",
+                    status="generated",
+                    stage="INTAKE",
+                    run_id="RUN-001",
+                )
+
+            receipt = root / "runs/RUN-001/automation-asset-reuse-receipt.json"
+            receipt.parent.mkdir(parents=True, exist_ok=True)
+            receipt.write_text('{"status":"passed"}\n', encoding="utf-8")
+            register_work_item_artifact(
+                root,
+                requirement_id="REQ-ASSET-REUSE",
+                artifact_id="ASSET-REUSE-RECEIPT-001",
+                artifact_type="automation_asset_reuse_receipt",
+                path="runs/RUN-001/automation-asset-reuse-receipt.json",
+                status="validated",
+                stage="INTAKE",
+                run_id="RUN-001",
+            )
+            result = register_work_item_artifact(
+                root,
+                requirement_id="REQ-ASSET-REUSE",
+                artifact_id="AUTO-EMPLOYEE-001",
+                artifact_type="automation_script",
+                path="features/employee-performance.spec.ts",
+                status="generated",
+                stage="INTAKE",
+                run_id="RUN-001",
+            )
+            self.assertEqual(result["status"], "registered")
+
     def test_cli_artifact_register_and_reconcile_expose_review_pending_state(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -419,7 +538,7 @@ class WorkItemTest(unittest.TestCase):
                     "--requirement-id", "REQ-CLI-001",
                     "--title", "CLI需求", "--feature", "CLI功能",
                     "--environment", "sit", "--platform", "web",
-                    "--scope", "核心范围",
+                    "--scope", "核心范围", "--test-mode", "rapid",
                 ])
             self.assertEqual(code, 0)
 
@@ -444,6 +563,7 @@ class WorkItemTest(unittest.TestCase):
             self.assertEqual(code, 0)
             shown = json.loads(show_out.getvalue())
             self.assertEqual(shown["current_stage"], "FEATURE_DISCOVERY")
+            self.assertEqual(shown["test_mode"], "rapid")
             self.assertEqual(shown["next_steps"], ["继续功能探索"])
             self.assertEqual(shown["environments"], ["sit", "pre"])
             self.assertEqual(shown["platforms"], ["web", "app"])

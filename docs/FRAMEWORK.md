@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.11.0 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a1 -->
 
 # AI 测试工程框架完整手册
 
@@ -14,11 +14,13 @@
 
 插件是可选分发形式。`ai-test plugin-build` 从 `.agents/skills/` 生成符合插件目录要求的临时包；生成的 `skills/` 只是发布产物，不是第二套维护源。完整安装、替换、回滚和旧插件退役规则见 [跨客户端 Skill 与插件分发](skill-and-plugin-distribution.md)。
 
+`AGENTS.md` 是测试工程师思维宪法与任务路由索引，不只是 Skill 列表。每项任务还必须按 [测试上下文索引](TEST_CONTEXT_INDEX.md) 查找项目本地系统地图、已审核业务知识、测试遗漏风险、唯一正式用例基线、执行资产和当前运行回执；适用 Skill 只负责流程，不代替这些内容。共同思考协议见 [测试工程师思维协议](TEST_ENGINEER_REASONING.md)；从系统辨识、可观测性、反馈和稳定性角度改进测试流程时，参考[《工程控制论》工作流映射](ENGINEERING_CYBERNETICS_WORKFLOW.md)。
+
 ## 2. 协作角色
 
 产品经理负责提供需求材料、环境、账号、业务决策和最终验收。AI测试工程师负责主动提问、探索、用例设计、数据生成、自动化、执行、问题定性、证据、报告和资产更新。
 
-AI提出业务问题时使用：当前理解、具体疑点、影响范围、建议口径、需要确认内容。问题分为阻塞和非阻塞；非阻塞问题不妨碍继续进行独立工作。
+AI提出业务问题时使用：当前理解、具体疑点、影响范围、建议口径、需要确认内容。问题分为阻塞和非阻塞；非阻塞问题不妨碍继续进行独立工作。所有模式执行前先按 [测试工程师思维协议](TEST_ENGINEER_REASONING.md) 建立测试意图、风险假设、断言、Fixture、独立Oracle和证据计划。
 
 独立复核者或子Agent承担需求/用例复核以及报告证据复核。复核者发现缺失后推动补拍、补传、归位和再次校验，不能只宣布报告不合格。
 
@@ -36,8 +38,13 @@ AI提出业务问题时使用：当前理解、具体疑点、影响范围、建
 | 新环境/平台 | 已有功能资产，但环境或平台未覆盖 | 只探索新增环境或平台差异 |
 | 版本变更回归 | 资产版本不一致 | 校验变更影响并增量探索 |
 | 稳定回归 | 环境、平台、版本和资产均有效 | 直接执行回归，保留轻量资产校验 |
+| 快速测试 | 用户确认需要先测，正式需求/规则/用例产物尚未准备完成 | 仅暂缓正式需求说明、BF/A审核与正式用例生成；仍加载项目知识并执行思考协议和逐探针断言/Fixture/独立Oracle冻结，结论为临时 |
 
 系统全局探索不是每次必跑。目标功能探索也不是每次从零开始：已有L3/L4资产时，只验证入口、核心控件、数据前置和版本兼容。
+
+快速测试不是免门禁测试。它只暂缓前置正式需求文档、审核规则和正式用例生成，不跳过项目上下文索引（包括遗漏风险规则）、测试意图、当前模型、风险假设、原子断言、目标Fixture、独立Oracle、证据与问题定性；快速模式只生成临时探针，不生成/批准正式用例或新基线。按 `.agents/skills/rapid-test/SKILL.md` 执行，使用 `templates/rapid-test-charter.example.json` 并遵循 `schemas/rapid-test-charter.schema.json`；章程按单次运行绑定。需用于验收/发布、重复回归、发现关键业务规则缺口/缺陷或产生实质业务写入时升级标准流程。只读或写入动作仍受项目授权和生产安全规则约束。
+
+每个新测试任务在首个页面/API/设备动作前都必须生成并保存测试计划包。标准模式使用批准的需求/用例范围、自动化准备度计划和执行前确认；快速模式使用临时测试章程与版本化探针。计划至少包含目标、范围/排除、知识和预期来源、环境/平台、角色、Fixture、覆盖/断言、独立Oracle、证据、风险、写入/清理/停止条件与完成标准。范围、基线或关键前置改变时重新冻结版本/哈希；缺少有效计划时不得开始正式执行。
 
 ## 4. 系统全局探索
 
@@ -83,6 +90,12 @@ assets/system/execution_asset_register.json
 - 每条核心断言需要的截图、视频、接口和数据证据。
 
 功能达到L3的标准：业务路径、状态、数据、角色、断言、证据点、测试数据和恢复方式均已确定。经过至少两个环境验证并形成稳定自动化资产后为L4。
+
+### 5.1 探索不是长期执行器
+
+首次功能探索前，以后续正式资产为目标列具体未知：稳定业务身份/定位、页面与接口状态、等待条件、独立Oracle、Fixture、幂等/停止点、视频和瞬态错误截图触发点。逐项记录 `implemented`（绑定存在且哈希匹配的资产）、带原因的 `blocked` 或带原因的 `not_applicable`。一个问题探明后先实现并验证正式包中的脚本/Oracle，不得在下一次rapid中重新自由探索同一问题；无法实现时登记负责人/期限，明确继续仅限探索。
+
+重复执行前用 `ai-test exploration-handoff-check --input ... --root ... --output ...` 执行 [交接契约](../schemas/exploration-handoff.schema.json)：验证可执行runner文件和哈希、同代码的通过测试回执、独立Oracle、远端备份修订与连续录屏/错误提示截图计划。没有正式审核基线时仍允许临时探针，但不允许把run-local Ego步骤当正式回归。收口阶段要求实际视频文件、技术/语义复核状态及每个计划断言对应的截图语义复核；图片存在和在对的章节不等于错误文字真的出现在图中。未知任务终态时不因缺片重传业务文件，先停止并取得安全处置。检查器只验证提交的文件/哈希和复核声明，不能独立证明复核人诚实、视频内容正确、业务授权或正式验收；技术视频质量继续用 `video-check` 验证。
 
 详见 [系统与功能探索](system-and-feature-discovery.md)。
 
@@ -151,6 +164,17 @@ AI不能只问“是否有关联”。提问前先读取系统导航、实体模
 
 需求阶段还没有正式用例ID时先记录候选用例类别。用例审核完成后，把稳定用例ID逐条绑定到角色、fixture、环境和证据点，重新生成计划哈希。执行前再创建 `pre_execution_confirmation`，确认当前功能、版本、环境、用例范围、账号角色、数据和排除项。`readiness-check` 校验计划哈希并输出已就绪、阻塞和排除用例。
 
+新增或大幅改写自动化脚本前，先检索功能目录、Page Object、共享 helper、包命令、执行资产登记和历史运行脚本。每个发现的候选必须记录覆盖能力、`reuse`／`extend`／`reject`／`supersede` 决策及依据；新资产还必须声明既有资产无法覆盖的具体缺口和复用基础。使用 `templates/automation-asset-reuse-review.example.json` 形成审计输入并执行：
+
+```bash
+ai-test automation-asset-reuse-check \
+  --input runs/latest/automation-asset-reuse-review.json \
+  --root . \
+  --output runs/latest/automation-asset-reuse-receipt.json
+```
+
+门禁会实际展开声明的文件匹配模式；发现但未处置的资产、缺失文件、无复用基础的新脚本或未确认审计都会阻塞。`work-item-artifact-register` 在登记 `automation_script` 时还会校验同一运行已有 `validated` 或 `approved` 的复用回执，缺失时拒绝登记。运行编排、收据格式或报告格式不同不构成复制业务流程的理由，应把差异放在共享适配层或既有正式脚本的增量扩展中。
+
 缺少角色或fixture只阻塞关联用例。移动端和硬件在环测试还要声明 `execution_target_requirements`、`hardware_fixture_requirements` 以及逐用例的执行目标和硬件依赖。执行目标只有在指定执行器完成doctor和capabilities校验后才能进入 `available_execution_target_ids`；提前绑定的耳机、工牌或其他外设只有人工准备和自动状态回读同时完成后才能进入 `ready_hardware_fixture_ids`。每个缺口用前置指纹登记到 `missing_prerequisites`；相同指纹未变化前，不得通过重新登录、刷新、重复点击或反复运行来碰运气。收到补充数据、账号角色、环境、执行目标或硬件后重新确认，只恢复前置发生变化的用例。完整操作见 [自动化准备度 Playbook](../playbooks/planning-automation-readiness/PLAYBOOK.md)。
 
 ### 7.4 列表结果完整性与一致性
@@ -171,7 +195,7 @@ SIT生成的数据模板可以跨环境复用；数据库ID、Cookie和密码不
 
 ## 9. 自动化执行器
 
-Web正式回归只使用Playwright Test。新需求默认由Ego Lite完成首轮语义/视觉探索、复用人工登录态并发现稳定Test ID、Role、Label、DOM线索和等待条件；Playwright MCP只按需生成或复核Playwright定位器，不是编写脚本的前置条件，没有安装时可使用Ego Lite语义快照、DOM/CDP、Playwright Inspector/Codegen、浏览器DevTools或现有Test ID完成定位；Chrome DevTools MCP负责网络、Console、性能与浏览器现场诊断；Stagehand只允许提出定位器、等待条件和已知瞬态弹窗修复候选。所有候选必须经过代码审查，并由Playwright执行单用例验证与影响回归。任何AI工具不得修改正式预期、业务规则、权限边界、Case ID或基线哈希，也不能成为正式回归的自由决策回退。
+Web正式回归只使用Playwright Test。核心业务流程的Playwright录屏须设为 `video: on` 并在测试动作前启动；`retain-on-failure` 会丢掉通过场景的连续证据。新需求首轮由Ego Lite完成观察、动作和回读，并由Jev从有限只读候选中提供advisory建议；Jev配置状态和能力检查由`web-executor-check`登记，低置信/Provider错误/无进展时安全停止。Ego Lite可复用人工登录态并发现稳定Test ID、Role、Label、DOM线索和等待条件；Playwright MCP只按需生成或复核Playwright定位器，不是编写脚本的前置条件，没有安装时可使用Ego Lite语义快照、DOM/CDP、Playwright Inspector/Codegen、浏览器DevTools或现有Test ID完成定位；Chrome DevTools MCP负责网络、Console、性能与浏览器现场诊断；Stagehand只允许提出定位器、等待条件和已知瞬态弹窗修复候选。所有候选必须经过代码审查，并由Playwright执行单用例验证与影响回归。任何AI工具不得修改正式预期、业务规则、权限边界、Case ID或基线哈希，也不能成为正式回归的自由决策回退。
 
 项目使用 `templates/web-executor-routing.example.json` 声明工具状态和分工，运行 `ai-test web-executor-check` 保存路由门禁回执。已可用工具必须锁定精确版本；凭据、Cookie、Token、storage state和模型Key只允许运行时安全注入。完整流程见[Web AI浏览器工具栈](web-ai-browser-stack.md)。坐标点击只允许作为探索或临时恢复证据，不进入稳定Playwright脚本。
 
@@ -184,6 +208,12 @@ App通过工具无关的移动执行器契约接入。执行目标由 `execution
 小程序可使用 Minium 覆盖核心业务、异常、权限、幂等和一致性；云真机工具可覆盖兼容性、性能、版本回归和 CI 门禁；随机测试只覆盖崩溃、卡死和页面可达性冒烟。带本地实体外设的链路默认使用本地真机节点，普通云真机不能推定能访问现场硬件。
 
 接口监听、数据库只读回读、日志和curl用于补强UI结论。出现接口报错时，应保存脱敏响应和可复现curl到约定的错误日志目录。
+
+### 9.1 团队分层样板与逐断言收口
+
+对新项目运行 `ai-test playwright-scaffold --root <project>` 可安装无需业务连接的 PO/Flow/Oracle/Test 示例；已有文件时不覆盖。详情见[团队自动化架构](TEAM_AUTOMATION_ARCHITECTURE.md)。Page Object 只包含页面动作和结构化读取；业务预期来自审核规则与独立 Fixture，由纯 Oracle 计算；断言失败必须传递给正式执行器，不能被日志器捕获后仍宣称 Playwright 用例通过。
+
+真实执行后，用 `ai-test automation-outcome-check --input <result.json> --root <project> --output <receipt.json>` 将稳定 Case/Assertion ID、预期来源、Fixture、独立 Oracle、逐断言证据与 Playwright JSON reporter 对账。它仅阻断局部回执矛盾或证据缺失，不自动证明权威基线、页面内容、执行时源代码哈希或产品缺陷成立；仍须人工/受控语义复核及原执行日志。离线故障注入和真实 UI 回归分别登记，不能互相替代。
 
 ## 10. 受控自愈
 
@@ -237,8 +267,8 @@ ai-test video-check \
 
 ```bash
 ai-test execution-log-start \
-  --root . --automation-id smart-earphone-web --run-id RUN-20260920-001 \
-  --feature "智能耳机 Web" --environment sit --platform web \
+  --root . --automation-id fictional-catalog-web --run-id RUN-SYNTH-001 \
+  --feature "虚构目录查询 Web" --environment sit --platform web \
   --purpose "发布前回归门禁" --objective "确认核心流程可进入下一环境" \
   --scope "搜索、筛选、分页和页面跳转" --baseline "approved-cases@sha256:..."
 ```
@@ -247,7 +277,7 @@ ai-test execution-log-start \
 
 ```bash
 ai-test execution-log-finish \
-  --root . --run-id RUN-20260920-001 --status passed \
+  --root . --run-id RUN-SYNTH-001 --status passed \
   --summary "纳入范围全部通过" --report reports/sit.md \
   --evidence runs/RUN-20260920-001/evidence-manifest.json \
   --asset-change "更新新版入口定位"
@@ -275,7 +305,7 @@ ai-test execution-log-finish \
 
 同一需求跨 SIT、预发布和正式环境时沿用同一工作项，但每个环境保留独立运行记录与报告。新需求、新正式用例基线或需要真正并行的独立目标创建新的工作项。详细使用方式见 [一需求一任务使用说明](ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md)。
 
-事实优先级：产品经理最新明确决定、已审核正式基线、当前运行证据、已验证资产、跨工具记忆、历史聊天。详见 [多会话协作](multi-session-coordination.md)。
+事实优先级：产品经理最新明确决定、已审核正式基线、当前运行证据、已验证资产、已审核测试方法/遗漏风险、AI推断、跨工具记忆与历史聊天。知识路径按 [测试上下文索引](TEST_CONTEXT_INDEX.md) 路由；检索命中不能代替读取，知识索引也不代替来源权威性判断。详见 [多会话协作](multi-session-coordination.md)。
 
 ## 14. 固定状态链
 

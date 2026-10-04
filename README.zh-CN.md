@@ -10,7 +10,7 @@ AI Test Engineer 是一套可移植、以证据为先的 AI 测试工程框架�
 
 ## 同事从 Git 克隆预览分支
 
-先按[同事克隆与安装说明](docs/TEAM_CLONE_QUICKSTART.md)取得 `release/ai-test-engineer-0.13.0a1`、隔离安装并完成版本、单测和虚构 API 项目健康检查。当前是独立预览分支，不等于默认分支或正式业务发布；没有产品写入授权或报告晋升。
+先按[同事克隆与安装说明](docs/TEAM_CLONE_QUICKSTART.md)取得 `release/ai-test-engineer-0.13.0a1`、隔离安装并完成版本、单测和虚构 API 项目健康检查。[预览分支远端验证回执](docs/RELEASE_CANDIDATE_0.13.0a1.md)记录了真实 CI 和新克隆证据。当前是独立预览分支，不等于默认分支或正式业务发布；没有产品写入授权或报告晋升。
 
 ## 跨客户端 Skill 与可选插件
 

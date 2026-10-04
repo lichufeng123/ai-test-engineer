@@ -16,7 +16,7 @@
 | M4 写边界 | `ai-test write-intent-reserve` | 仅 `local/synthetic` 虚构画像可创建原子独占写意图；错键/写前漂移/观测陈旧/审批声明不匹配/重复写均阻塞；未知状态不释放保留文件 | 非合成环境的授权适配与现场读回尚未实现，因此真实业务写入由代码明确阻塞；Playwright 用例还未统一调用本门禁 |
 | M5 结果与隐私 | `ai-test playwright-receipts-check`、`checkWithReceipt`、`ai-test privacy-check`、`ai-test report-promotion-check` | 断言失败必须抛给 Playwright；从实际 JSON reporter 附件自动对账每个 A ID、run/case/fixture/Oracle/probe 哈希，拦截吞失败/缺附件/重试；隐私扫描不输出匹配值，未经逐文件语义审查阻塞 | 人工审核声明可被伪造；浏览器动作真实性/报告源码版本真实性/媒体语义不能由当前代码证明，不能把 gate `passed` 解释成产品通过 |
 | M5 合成报告交付前核验 | `report_promotion.py`、`schemas/report-promotion-request.schema.json` | 要求已收口的受控 run、原探针/源码/计划/Reporter/Marker/执行历史/资产反馈同一身份且哈希仍一致；逐媒体及报告文件被隐私审核清单完整覆盖。缺录像、缺人工复核声明、直接运行 Playwright 或交叉 run 均阻塞。即使合成材料一致也仅 `review_required`（退出码 1），不产生产品通过 | `standard` 模式当前始终返回 `trusted_business_promotion_adapter_missing`，不接受输入中的 `current_verified` 自声明；本地审核声明不可验证审核人身份。还须在组织 CI/报告系统真正强制调用，外部脚本可绕过 CLI |
-| M6 性能与推广 | Starter 的 `PhaseTiming`，本机一条正控阶段计时 | 记录 fixture/navigation/action/assertion 本机样本 | 两个独立合成项目已在本机隔离安装中验证；仍需远端多系统 CI 与另一台机器的克隆验收；任何具体组织的真实业务试点属于使用方接入验收，不是公开框架交付的先决条件 |
+| M6 性能与推广 | Starter 的 `PhaseTiming`，本机一条正控阶段计时 | 记录 fixture/navigation/action/assertion 本机样本 | 两个独立合成项目已在本机隔离安装中验证；远端 Ubuntu/macOS/Windows 合成适配器矩阵已通过；仍需另一位同事在自己的机器完成克隆签收；任何具体组织的真实业务试点属于使用方接入验收，不是公开框架交付的先决条件 |
 
 ## 私有知识只读适配入口（不随公开仓库分发私有数据）
 
@@ -43,7 +43,7 @@
 
 [`schemas/report-promotion-request.schema.json`](../schemas/report-promotion-request.schema.json) 要求新 run 的 `guarded_receipt` 与 `privacy_manifest` 两个相对路径/SHA引用。`privacy_manifest` 必须位于该 run 下且逐一覆盖 JSON reporter 和所有媒体文件；每项人工复核声明须绑定文件 SHA。`ai-test report-promotion-check --root <project> --input <project>/runs/<RUN-ID>/report-promotion-request.json` 对照原 guarded bundle、marker、当轮 reporter、执行历史和资产反馈重新核验，不依赖请求方声称的结果。真实 `RUN-20261004-GUARDED-SYNTH-006` 缺媒体人工审查，得到 `blocked/semantic_privacy_review_missing`、退出码 1；该原始运行仍是 `partial`，未回填任何假审核。
 
-即使技术材料齐全，合成门禁只返回 `review_required` / 退出码 1；`mode=standard` 无可信 Current/正式业务授权适配时始终阻塞。公开仓库 `.github/workflows/ci.yml` 已增 `report-contract-static`：单独跑晋升门禁负控、离线打包及隔离安装 CLI，要求安装后的标准报告输入必须阻塞；本机等效验证通过，但尚未取得 GitHub Actions 远端运行回执、设置分支保护必需状态，也没有组织私有 CI 接线。接入清单见 [`docs/CI_REPORT_GATE_ADOPTION.md`](CI_REPORT_GATE_ADOPTION.md)。必须在组织正式报告/私有仓库的受保护 CI 及提交入口强制调用可信适配器后，才有资格讨论“不可绕过”。审核声明在本地可伪造，单纯回执哈希不能证明真实浏览器动作、产品预期或审核人身份。
+即使技术材料齐全，合成门禁只返回 `review_required` / 退出码 1；`mode=standard` 无可信 Current/正式业务授权适配时始终阻塞。公开仓库 `.github/workflows/ci.yml` 已增 `report-contract-static`：单独跑晋升门禁负控、离线打包及隔离安装 CLI，要求安装后的标准报告输入必须阻塞；本机等效验证及本预览分支的 GitHub Actions 运行 [37214883884](https://github.com/lichufeng123/ai-test-engineer/actions/runs/37214883884) 均通过，但尚未设置分支保护必需状态，也没有组织私有 CI 接线。接入清单见 [`docs/CI_REPORT_GATE_ADOPTION.md`](CI_REPORT_GATE_ADOPTION.md)。必须在组织正式报告/私有仓库的受保护 CI 及提交入口强制调用可信适配器后，才有资格讨论“不可绕过”。审核声明在本地可伪造，单纯回执哈希不能证明真实浏览器动作、产品预期或审核人身份。
 
 ## 本机可复判证据
 
@@ -57,7 +57,7 @@
 
 1. 通用适配器已具备仅本地虚构项目的只读回调执行和离线回执核验，但缺真实平台受控运行器的动作时身份/StepReceipt 接线。官方计数器只是合成浏览器示例，外部脚本仍可绕过本地 CLI；下一步应做不含领域规则的通用适配器注册、执行边界与反例验收。
 2. 缺可信执行/审核回执的通用扩展协议及正式报告入口的受保护 CI 接法。公开 `report-contract-static` 需等真实 Actions 和 branch-protection 回执；本地哈希链与人工审核声明不具签名或来源认证。
-3. 已有本机隔离环境安装与两个独立合成项目的测试，仍缺远端 Windows/设备和其他同事的干净机器克隆签收、正式版本发布与升级/回滚签收。这些是框架工程交付项，不依赖任何指定业务资料。
+3. 已有本机隔离环境安装与两个独立合成项目的测试，远端 Windows 的虚构适配器/执行日志测试已通过；仍缺真实设备和其他同事的干净机器克隆签收、正式版本发布与升级/回滚签收。这些是框架工程交付项，不依赖任何指定业务资料。
 
 ## 使用方接入时才需要的输入（不是公开框架交付阻塞）
 

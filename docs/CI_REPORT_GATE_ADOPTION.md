@@ -4,7 +4,7 @@
 
 ## 公开仓库已接的静态检查
 
-`.github/workflows/ci.yml` 的 `test` 工作运行全量单测和 `docs-check`。还配置了 `portable-adapter-smoke` 在 Ubuntu/Windows/macOS 上分别运行虚构适配器及 API-only 入门测试、离线 wheel 构建和安装后模块加载；该矩阵尚无远端运行回执。新增 `report-contract-static` 独立工作：运行报告门禁负控、两个独立虚构只读适配器的合同正反控、禁止联网构建 wheel、从隔离目录调用安装后的报告与适配器 CLI，并要求标准业务输入因缺可信适配而退出非零。它不下载私有运行证据、不登录产品，也不执行真实 Playwright。仓库管理员须在推送后实际检查 Actions 运行结果，并把应强制的 `test`、`portable-adapter-smoke`、`report-contract-static` 工作设为受保护分支的 required status checks；提交前本地成功不等于已设置分支保护。
+`.github/workflows/ci.yml` 的 `test` 工作运行全量单测和 `docs-check`。还配置了 `portable-adapter-smoke` 在 Ubuntu/Windows/macOS 上分别运行虚构适配器及 API-only 入门测试、离线 wheel 构建和安装后模块加载；该矩阵的远端合成验证已在 [Actions 37214883884](https://github.com/lichufeng123/ai-test-engineer/actions/runs/37214883884) 通过；不包含真实产品设备或业务动作。新增 `report-contract-static` 独立工作：运行报告门禁负控、两个独立虚构只读适配器的合同正反控、禁止联网构建 wheel、从隔离目录调用安装后的报告与适配器 CLI，并要求标准业务输入因缺可信适配而退出非零。它不下载私有运行证据、不登录产品，也不执行真实 Playwright。本预览分支的上述三类工作已在 37214883884 全部通过；仓库管理员仍须把应强制的 `test`、`portable-adapter-smoke`、`report-contract-static` 设为受保护分支的 required status checks，远端成功不等于已设置分支保护。
 
 ## 私有报告入口要由有权限的维护者接线（当前未完成）
 

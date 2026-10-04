@@ -136,7 +136,7 @@ The in-development `env-resolve`, `probe-check`, `write-intent-reserve`, `playwr
 
 ## Team clone and install (0.13.0a1 preview branch)
 
-Follow the [Git clone quickstart](docs/TEAM_CLONE_QUICKSTART.md) for the independent preview branch, version check, full offline tests and synthetic API onboarding. A separate [offline kit procedure](docs/TEAM_PREVIEW_INSTALL.md) is available when an audited wheel is provided. Do not assume this branch is the default or a tagged stable Release. No product-adapter authorization or business-result promotion is included.
+Follow the [Git clone quickstart](docs/TEAM_CLONE_QUICKSTART.md) for the independent preview branch, version check, full local tests and synthetic API onboarding; see the [candidate evidence](docs/RELEASE_CANDIDATE_0.13.0a1.md). A separate [offline kit procedure](docs/TEAM_PREVIEW_INSTALL.md) is available when an audited wheel is provided. Do not assume this branch is the default or a tagged stable Release. No product-adapter authorization or business-result promotion is included.
 
 ## Domain-neutral read-only adapter contract
 

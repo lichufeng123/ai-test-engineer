@@ -22,6 +22,7 @@ Agent Skills 规范定义 Skill 内部的 `SKILL.md`、`scripts/`、`references/
 | `test-case-generate` | 生成、审核和反哺唯一正式用例基线 |
 | `requirement-grounded-functional-testing` | 执行需求驱动的跨端功能测试 |
 | `test-execution-asset-retrospective` | 沉淀执行资产和提速经验 |
+| `test-recording-generate` | 离线生成合成语音/静音测试录音和音频清单；不负责上传或裁决标签 |
 
 ## 项目级使用
 
@@ -66,7 +67,7 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 
 退役旧插件前必须建立能力映射，确认其每项独有能力已经迁移并完成等价验证。顺序为：
 
-1. 校验六个跨客户端 Skill。
+1. 校验当前跨客户端 Skill。
 2. 安装 universal 与当前客户端兼容入口。
 3. 用真实的需求、规则、用例和执行场景分别完成冒烟。
 4. 保存旧插件版本与本地备份位置。

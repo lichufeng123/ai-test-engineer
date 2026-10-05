@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a1 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a2 -->
 
 # AI Test Engineer
 
@@ -213,6 +213,14 @@ ai-test execution-log-finish \
 ai-test data-generate \
   --spec templates/fixture-spec.example.json \
   --output ./fixtures/generated
+```
+
+需要离线生成合成语音/静音录音时，使用[测试录音生成 Skill](.agents/skills/test-recording-generate/SKILL.md)。语音依赖 macOS `say`，音频编码/回读依赖 `ffmpeg`/`ffprobe`；输出逐文件哈希与清单，不上传产品，也不自行验证标签预期：
+
+```bash
+python3 .agents/skills/test-recording-generate/scripts/generate_recordings.py \
+  --spec .agents/skills/test-recording-generate/assets/recording-spec.example.json \
+  --output "$TMPDIR/recording-run-001"
 ```
 
 测试前为稳定用例 ID 制定证据计划。报告中的关键结论必须有截图、视频、接口、日志或数据回读支持。截图和媒体发布后还要重新读取报告，确认图片块真实存在且位于对应章节。

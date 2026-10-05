@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a1 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a2 -->
 
 # AI Test Engineer
 
@@ -193,6 +193,14 @@ Generate deterministic test fixtures:
 ai-test data-generate \
   --spec templates/fixture-spec.example.json \
   --output ./fixtures/generated
+```
+
+Generate offline synthetic speech/silence recordings with the project-scoped [test-recording-generate Skill](.agents/skills/test-recording-generate/SKILL.md). Its script uses macOS `say` for speech and `ffmpeg`/`ffprobe` for encoding and inspection, produces a manifest with per-file hashes, and never uploads audio or validates product tags:
+
+```bash
+python3 .agents/skills/test-recording-generate/scripts/generate_recordings.py \
+  --spec .agents/skills/test-recording-generate/assets/recording-spec.example.json \
+  --output "$TMPDIR/recording-run-001"
 ```
 
 Check evidence and embedded report media:

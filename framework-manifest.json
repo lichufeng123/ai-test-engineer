@@ -1,7 +1,7 @@
 {
   "name": "ai-test-engineer",
-  "framework_version": "0.13.0a1",
-  "documentation_version": "0.13.0a1",
+  "framework_version": "0.13.0a2",
+  "documentation_version": "0.13.0a2",
   "exploration_handoff_schema": "schemas/exploration-handoff.schema.json",
   "python": ">=3.9",
   "canonical_handbook": "docs/FRAMEWORK.md",
@@ -23,6 +23,7 @@
   },
   "optional_tools": {
     "video-check": ["ffprobe", "ffmpeg"],
+    "test-recording-generate": ["macos-say", "ffmpeg", "ffprobe"],
     "agent-device": ["node>=22.12", "xcode", "adb"],
     "web-browser-stack": ["playwright-mcp", "chrome-devtools-mcp", "ego-lite", "stagehand"]
   }

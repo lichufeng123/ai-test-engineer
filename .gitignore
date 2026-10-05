@@ -9,6 +9,7 @@ dist/
 .ai-test/
 runs/
 assets/
+!/.agents/skills/test-recording-generate/assets/
 fixtures/generated/
 AUTOMATION_EXECUTION_HISTORY.md
 outputs

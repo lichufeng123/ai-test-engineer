@@ -28,6 +28,7 @@ SKILL_NAMES = {
     "test-omission-risk-retrospective",
     "rapid-test",
     "test-data-and-account-fixture-management",
+    "test-recording-generate",
 }
 
 

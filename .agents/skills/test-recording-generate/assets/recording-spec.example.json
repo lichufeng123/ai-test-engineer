@@ -1,0 +1,36 @@
+{
+  "feature_id": "synthetic-memory-demo",
+  "environment": "local",
+  "format": "wav",
+  "voice": "Tingting",
+  "rate_wpm": 180,
+  "fixtures": [
+    {
+      "fixture_id": "REC-DEMO-001",
+      "kind": "speech",
+      "purpose": "虚构单人朗读：待审核记忆样本",
+      "text": "您好，这是用于测试的合成录音。",
+      "expectation_status": "pending"
+    },
+    {
+      "fixture_id": "REC-DEMO-002",
+      "kind": "dialogue",
+      "purpose": "虚构双人接待对话：需达到最小真实长度",
+      "pause_seconds": 0.4,
+      "min_duration_seconds": 10,
+      "expectation_status": "pending",
+      "turns": [
+        {"speaker": "员工", "voice": "Reed (中文（中国大陆）)", "text": "您好，今天想先了解哪方面的护理？"},
+        {"speaker": "顾客", "text": "我先听听你们的建议，再做决定。"},
+        {"speaker": "员工", "voice": "Reed (中文（中国大陆）)", "text": "好的，我把方案和原因都跟您讲清楚。"}
+      ]
+    },
+    {
+      "fixture_id": "REC-DEMO-003",
+      "kind": "silence",
+      "purpose": "静音输入边界",
+      "duration_seconds": 1,
+      "expectation_status": "pending"
+    }
+  ]
+}

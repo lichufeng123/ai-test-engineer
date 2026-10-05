@@ -1,6 +1,6 @@
 {
   "name": "ai-test-engineer",
-  "version": "0.13.0a1",
+  "version": "0.13.0a2",
   "description": "Portable AI testing workflow skills, deterministic gates, and execution-asset practices for evidence-based software testing.",
   "author": {
     "name": "AI Test Engineer contributors"

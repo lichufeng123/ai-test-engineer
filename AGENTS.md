@@ -34,6 +34,7 @@ Select and load the canonical skill; do not blend incompatible authority levels:
 - Formal cases, regression impact, test closure: `.agents/skills/test-case-generate/SKILL.md`.
 - Time-boxed testing before formal requirement/case artifacts: `.agents/skills/rapid-test/SKILL.md`.
 - 首轮 Web 语义/视觉探索：Ego Lite负责观察、执行和回读；Jev advisor 参与从有限只读候选动作中建议下一步。Jev 不得生成任意脚本/选择器/URL、执行写入、选择业务目标、改变预期或裁决结果；无配置、低置信、无进展及 Provider 错误均需显式阻塞/安全停止，按 `docs/web-ai-browser-stack.md` 和 `ai-test web-executor-check` 路由。
+- Offline synthetic test recordings (speech/silence): `.agents/skills/test-recording-generate/SKILL.md`; business Fixture creation and cleanup remain under `test-data-and-account-fixture-management`.
 - Web/API/App/H5/mini-app execution: `.agents/skills/requirement-grounded-functional-testing/SKILL.md`.
 - 首轮 Web 语义/视觉探索：默认由 Ego Lite 观察执行；若 Jev advisor 已配置，按 `docs/web-ai-browser-stack.md` 让 Jev 仅从本地生成的有限只读候选动作中建议下一步，Ego Lite 负责执行、回读并留存 advisory 收据。Jev 不得生成任意命令/选择器/URL、执行写入、挑选业务目标或裁定测试结果；不可用/低置信/无进展/Provider错误时安全停止。
 - Missed scenarios, user corrections, false positives: `.agents/skills/test-omission-risk-retrospective/SKILL.md`.

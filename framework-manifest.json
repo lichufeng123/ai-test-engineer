@@ -1,7 +1,7 @@
 {
   "name": "ai-test-engineer",
-  "framework_version": "0.13.0a2",
-  "documentation_version": "0.13.0a2",
+  "framework_version": "0.13.0a3",
+  "documentation_version": "0.13.0a3",
   "exploration_handoff_schema": "schemas/exploration-handoff.schema.json",
   "python": ">=3.9",
   "canonical_handbook": "docs/FRAMEWORK.md",

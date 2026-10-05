@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a2 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a3 -->
 
 # AI Test Engineer
 
@@ -33,7 +33,7 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 
 ## 测试工程师入口与快速测试
 
-`AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。接到具体功能测试，先查功能地图、已有工作项与历史测试/缺陷，快速复核本轮环境、角色和版本差异，再补测未验证的部分；历史通过不等于本轮通过。随后按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取适用知识、规则、风险和执行资产。首轮 Web 探索由 Ego Lite 执行；Jev 若可用，仅提供受限只读建议，[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
+`AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。接到具体功能测试，先查功能地图、已有工作项与历史测试/缺陷，快速复核本轮环境、角色和版本差异，再补测未验证的部分；历史通过不等于本轮通过。SIT 任务在打开登录页前从经审核账号索引选定唯一的非敏感账号别名、角色与组织，已有匹配登录态直接复用；没有唯一账号时只在任务开始问一次，不在每次登录时重复请示。密码只在安全运行时或交接成功后的浏览器中输入，`UI not available` 不能当作交接成功。随后按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取适用知识、规则、风险和执行资产。首轮 Web 探索由 Ego Lite 执行；Jev 若可用，仅提供受限只读建议，[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
 
 每个新测试任务必须在首次页面/API/设备动作前保存测试计划包。标准模式以批准范围/用例基线、自动化准备度计划和执行前确认组成；快速模式以临时快速测试章程和版本化探针组成。快速测试只暂缓正式需求说明、BF/A规则审核和正式用例生成；仍须加载当前知识与遗漏风险规则，不会自行生成或批准正式用例，也不创建新基线。风险分析、关键动作前冻结断言/Fixture/独立Oracle、证据和问题定性仍必须执行。结果是临时结论，不得充当完整验收或发布门禁。按 `.agents/skills/rapid-test/SKILL.md` 执行，并使用[快速测试章程模板](templates/rapid-test-charter.example.json)及[Schema](schemas/rapid-test-charter.schema.json)。
 

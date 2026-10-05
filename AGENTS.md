@@ -25,6 +25,8 @@ For each task, locate and actually read applicable sources in this order:
 
 For each task, first locate the feature in the system/feature map and existing work-item index, then read prior run receipts, defects, fixtures and execution assets. Reuse applicable understanding and verify only environment/version/role changes before continuing untested cases. If no feature entry exists, make a targeted discovery entry; do not repeat a full system exploration by default. Historical passes do not count as evidence for the current run. Record what was loaded, applicable rules, conflicts, exclusions, and unreadable/missing sources. Resolve conflicts by source authority, not retrieval rank or model confidence. Read-only knowledge routers are supported; their path list is not proof of understanding.
 
+For SIT execution, select the account before opening the login page: use the approved account/fixture registry and prior run only to identify a unique non-secret alias, role and organization scope. If the target account is missing or ambiguous, ask once at task intake; if a matching authenticated session is available, reuse it after checking the actual role/scope. An existing SIT test authorization is not a request to ask permission for every login. Credentials must remain in approved runtime sources or a completed user handoff. A browser handoff succeeds only when the tool confirms completion; `UI not available` is a tool failure, not an invitation to ask the user to log in to an inaccessible window. If the user owns the task space, stop browser work until they explicitly return control; do not take it back on your own.
+
 ## Mode routing
 
 Select and load the canonical skill; do not blend incompatible authority levels:

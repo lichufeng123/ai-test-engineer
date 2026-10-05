@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a2 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a3 -->
 
 # AI Test Engineer
 
@@ -29,7 +29,7 @@ The generated package contains `.codex-plugin/plugin.json` and the plugin-requir
 
 ## Testing entrypoint and rapid mode
 
-`AGENTS.md` is the testing constitution and task-routing index, not merely a Skill list. When a feature is named, first inspect its feature map, existing work items and prior runs/defects. Recheck the current environment, role and build, then cover the gaps; prior passes are not current-run results. Load applicable project knowledge through [the testing context index](docs/TEST_CONTEXT_INDEX.md). All modes follow [the test-engineer reasoning protocol](docs/TEST_ENGINEER_REASONING.md). Ego Lite performs first-round Web discovery; Jev is an optional bounded read-only advisor. See the [browser stack contract](docs/web-ai-browser-stack.md) and [Engineering Cybernetics mapping](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md).
+`AGENTS.md` is the testing constitution and task-routing index, not merely a Skill list. When a feature is named, first inspect its feature map, existing work items and prior runs/defects. Recheck the current environment, role and build, then cover the gaps; prior passes are not current-run results. For SIT, select one approved non-secret account alias, role and organization before reaching the login page. Reuse a matching authenticated session; ask once at intake only when account identity is missing or ambiguous. Credentials stay in a secure runtime or in a browser space handed to the user successfully. `UI not available` does not mean handoff succeeded. Load applicable project knowledge through [the testing context index](docs/TEST_CONTEXT_INDEX.md). All modes follow [the test-engineer reasoning protocol](docs/TEST_ENGINEER_REASONING.md). Ego Lite performs first-round Web discovery; Jev is an optional bounded read-only advisor. See the [browser stack contract](docs/web-ai-browser-stack.md) and [Engineering Cybernetics mapping](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md).
 
 Every new test task must have a saved test-plan package before its first page/API/device action. Standard tasks use the approved scope/case baseline, automation-readiness plan, and pre-execution confirmation; rapid tasks use a provisional rapid charter plus versioned probes. Rapid testing may defer only the formal requirement specification, reviewed BF/A rule production, and formal case generation; it must still load current knowledge and omission-risk rules, and it does not generate or approve formal test cases or a new baseline. It still requires risk analysis, assertion/fixture/independent-oracle freeze before consequential actions, evidence, and triage. Results are provisional, not full acceptance or release-gate outcomes. Follow `.agents/skills/rapid-test/SKILL.md` and use [the rapid charter template](templates/rapid-test-charter.example.json) with [its schema](schemas/rapid-test-charter.schema.json).
 

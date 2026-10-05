@@ -1,31 +1,30 @@
-# 同事从 Git 克隆与安装（0.13.0a1 预览分支）
+# 同事从 GitLab 克隆与安装
 
-在获得仓库读取权限且机器有 Python ≥3.9、pip 和批准的 Python 构建依赖源后，使用下面的独立预览分支；不要误以为直接 clone 默认分支就有同一版本。真实远端提交与 CI 状态应先由发布负责人核对。
+从公司 GitLab 的 `lucifer/ai-test-engineer` 分支取得框架；该分支与公司仓库原有的 `release` 历史无共同祖先，不要向原 `release` 发合并请求。安装检查仅证明框架可用，不代表 SIT 业务已测试或浏览器已登录。
 
-公司内网从 GitLab 取得（当前为该个人分支承载的框架线，历史与 `release` 无关，不要用它向 `release` 或默认分支发 MR）：
-
-```bash
-git clone --branch lucifer/ai-test-engineer --single-branch git@gitlab.meimeifa.com:yz-testing/tests-tools.git
-cd tests-tools
-```
-
-历史来源（可选的只读参照，不再是权威远端）：
+在获仓库读取权限、Python ≥3.9 且构建依赖来源获团队批准的机器上执行（macOS/Linux）：
 
 ```bash
-git clone --branch release/ai-test-engineer-0.13.0a1 --single-branch git@github.com:lichufeng123/ai-test-engineer.git
+git clone --branch lucifer/ai-test-engineer --single-branch '<GITLAB_REPO_SSH_URL>' ai-test-engineer
 cd ai-test-engineer
-```
+git rev-parse --short HEAD
 python3 -m venv .venv
 .venv/bin/python -m pip install .
-.venv/bin/python -c 'import ai_test_framework; print(ai_test_framework.__version__)'
+.venv/bin/python - <<'PY'
+import json
+import ai_test_framework
+expected = json.load(open('framework-manifest.json'))['framework_version']
+assert ai_test_framework.__version__ == expected, (ai_test_framework.__version__, expected)
+print('framework_version:', expected)
+PY
 .venv/bin/ai-test docs-check --root .
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -q
 .venv/bin/ai-test init ../ai-test-catalog-demo --name fictional-catalog --system-id SYNTH-CATALOG --platform api
 .venv/bin/ai-test doctor --root ../ai-test-catalog-demo --framework-root .
 ```
 
-预期：版本 `0.13.0a1`，`docs-check` 和纯 API 项目 `doctor` 为 `passed`，本分支公开单测全部通过。以上 `init` 仅在全新目录执行（命令不会替你保护一个已有同名目录）；不填写账号/密码，不连接真实业务系统。两个独立虚构适配器的实际本地只读回调及错误目标反例位于 `examples/synthetic_adapter_projects/`、`tests/test_adapter_trace.py`，验证结果最多为 `review_required`，不代表产品通过。
+示例 `init` 仅在新目录执行，不要覆盖已有项目。版本应等于 `framework-manifest.json`，`docs-check` 和纯 API 示例项目 `doctor` 为 `passed`。`doctor` 不读取账号或密码，不证明产品网站可登录；虚构适配器测试也不代表实际业务通过。
 
-如所在环境不允许 pip 从公网获取构建依赖，使用团队批准的包镜像，或向发布负责人领取与本分支 SHA 匹配的已审核 wheel；不可因安装失败跳过校验。Windows PowerShell 把 `.venv/bin/python`、`.venv/bin/ai-test` 分别替换为 `.venv\\Scripts\\python.exe`、`.venv\\Scripts\\ai-test.exe`，并等远端 Windows CI 真正通过后再宣称跨系统可用。需要真实浏览器执行时还须单独按锁文件安装 Playwright 与浏览器，当前 `doctor` 不会凭静态文件证明浏览器可用。
+开始 SIT 试点前，先从获审核的账号/Fixture 索引选定非敏感账号别名、角色、组织与登录方式；有匹配登录态则复用，没有唯一账号时在进入登录页前一次问清。密码、验证码只通过安全运行时或已成功交接的浏览器空间提供，不能发到聊天或仓库。工具报告 `UI not available` 时并未交接成功，不要要求用户在不可见任务空间登录。
 
-这条预览分支不是正式业务报告/写入入口，也不是默认分支上的稳定版本。新版本或正式 Release 以对应 tag、签收与远端 required checks 为准，禁止把本地材料当远端结果。
+如 pip 无法从公网取得构建依赖，改用团队批准的镜像或与该 Git 提交对应的已审核 wheel。Windows 使用 `.venv\\Scripts\\python.exe` 和 `.venv\\Scripts\\ai-test.exe`，并以实际 Windows CI/设备回执判断可用性。真实浏览器执行还需安装锁定的 Playwright 依赖及浏览器；从 GitHub 取得的历史预览不属于当前 GitLab 发布证据。

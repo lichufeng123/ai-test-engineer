@@ -46,6 +46,14 @@
     "forbidden_actions": ["新增、编辑、删除和发送通知"],
     "authorization_ref": null
   },
+  "account_selection": {
+    "account_alias": "SIT-READER-EXAMPLE",
+    "role_id": "ROLE-READER",
+    "organization_scope": "SYNTHETIC-ORG",
+    "selection_source": "approved account registry example",
+    "login_mode": "existing_session",
+    "status": "selected"
+  },
   "probes": [
     {
       "probe_id": "P-001",

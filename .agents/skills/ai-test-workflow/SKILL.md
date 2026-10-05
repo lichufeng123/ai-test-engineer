@@ -21,7 +21,7 @@ metadata:
 - 用户要求限时先测，或正式需求/规则/用例尚未产出但要先发现问题：`rapid-test`；仅暂缓正式文档和正式用例设计，不降低测试工程师思考、知识加载、断言/Fixture/Oracle、证据与定性要求。
 - 需要创建、维护、隔离或清理测试账号、员工/顾客、权限、订单、支付资产或其他业务Fixture：`test-data-and-account-fixture-management`。
 - 需要离线合成测试录音、静音文件及音频清单：`test-recording-generate`；实际上传和业务判断仍走正式测试流程。
-- 需要页面、接口或跨端执行：`requirement-grounded-functional-testing`。
+- 需要页面、接口或跨端执行：`requirement-grounded-functional-testing`。SIT 执行开始前按账号/Fixture 台账一次选定账号别名、角色、组织和登录方式；已授权且已登录时复用会话，只有身份不确定才尽早问用户，不在登录页面重复请求业务许可。
 - 需要把缺陷暴露的漏测、用户纠正或测试误判沉淀为后续设计规则：`test-omission-risk-retrospective`。
 - 需要沉淀本轮学习与提速：`test-execution-asset-retrospective`。
 

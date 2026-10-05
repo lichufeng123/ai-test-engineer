@@ -1,10 +1,20 @@
-# 同事从 Git 克隆与安装（0.13.0a1 公开预览分支）
+# 同事从 Git 克隆与安装（0.13.0a1 预览分支）
 
 在获得仓库读取权限且机器有 Python ≥3.9、pip 和批准的 Python 构建依赖源后，使用下面的独立预览分支；不要误以为直接 clone 默认分支就有同一版本。真实远端提交与 CI 状态应先由发布负责人核对。
+
+公司内网从 GitLab 取得（当前为该个人分支承载的框架线，历史与 `release` 无关，不要用它向 `release` 或默认分支发 MR）：
+
+```bash
+git clone --branch lucifer/ai-test-engineer-0.13.0a1 --single-branch git@gitlab.meimeifa.com:yz-testing/tests-tools.git
+cd tests-tools
+```
+
+历史来源（可选的只读参照，不再是权威远端）：
 
 ```bash
 git clone --branch release/ai-test-engineer-0.13.0a1 --single-branch git@github.com:lichufeng123/ai-test-engineer.git
 cd ai-test-engineer
+```
 python3 -m venv .venv
 .venv/bin/python -m pip install .
 .venv/bin/python -c 'import ai_test_framework; print(ai_test_framework.__version__)'

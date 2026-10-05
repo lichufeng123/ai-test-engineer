@@ -8,7 +8,6 @@ REQUIRED_TOOL_ROLES = {
     "playwright-mcp": {"locator_generation", "locator_validation"},
     "chrome-devtools-mcp": {"diagnosis", "network", "console", "performance"},
     "ego-lite": {"discovery", "authenticated_exploration", "fallback"},
-    "jev-advisor": {"bounded_read_only_advisory"},
     "stagehand": {"controlled_self_heal"},
 }
 
@@ -154,6 +153,9 @@ def check_web_execution_routing(payload: Dict[str, Any]) -> Dict[str, Any]:
                 f"{tool_id}缺少职责: {', '.join(missing)}",
             )
 
+    if "jev-advisor" in tool_map and "bounded_read_only_advisory" not in set(_as_list(tool_map["jev-advisor"].get("roles"))):
+        collector.add("TOOL_ROLE_INCOMPLETE", "$.tools[jev-advisor].roles", "Jev只能作为有限只读建议器")
+
     routes = _as_mapping(payload.get("routes"))
     for route_id, expected_primary in REQUIRED_ROUTES.items():
         route = _as_mapping(routes.get(route_id))
@@ -173,11 +175,11 @@ def check_web_execution_routing(payload: Dict[str, Any]) -> Dict[str, Any]:
             )
         references = [route.get("primary"), *_as_list(route.get("fallbacks"))]
         advisor = route.get("advisor")
-        if route_id == "new_feature_discovery" and advisor != "jev-advisor":
+        if route_id == "new_feature_discovery" and advisor not in {None, "jev-advisor"}:
             collector.add(
-                "JEV_FIRST_ROUND_ADVISOR_REQUIRED",
+                "JEV_ADVISOR_ID_INVALID",
                 f"$.routes.{route_id}.advisor",
-                "首轮探索必须声明Jev为受限建议器；实际页面动作仍由Ego Lite执行",
+                "建议器若启用，只能声明jev-advisor；实际动作仍由Ego Lite执行",
             )
         if advisor is not None:
             references.append(advisor)
@@ -246,13 +248,14 @@ def check_web_execution_routing(payload: Dict[str, Any]) -> Dict[str, Any]:
         "provider_failure": "stop_no_retry",
         "require_incomplete_terminal": True,
     }
-    for key, expected in required_jev_values.items():
-        if jev.get(key) != expected:
-            collector.add(
-                "JEV_SAFETY_POLICY_VIOLATION",
-                f"$.policies.jev.{key}",
-                f"Jev策略必须满足 {key}={expected!r}",
-            )
+    if "jev-advisor" in tool_map or "jev" in policies or _as_mapping(routes.get("new_feature_discovery")).get("advisor") is not None:
+        for key, expected in required_jev_values.items():
+            if jev.get(key) != expected:
+                collector.add(
+                    "JEV_SAFETY_POLICY_VIOLATION",
+                    f"$.policies.jev.{key}",
+                    f"Jev策略必须满足 {key}={expected!r}",
+                )
 
     stagehand = _as_mapping(policies.get("stagehand"))
     forbidden = set(_as_list(stagehand.get("forbidden_changes")))

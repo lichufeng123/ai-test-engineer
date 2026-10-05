@@ -23,7 +23,7 @@ For each task, locate and actually read applicable sources in this order:
 5. Reusable feature/system assets, fixtures, page objects, helpers, package commands, execution receipts, and historical runs.
 6. Executor capabilities, environment/version, authorization and privacy constraints.
 
-Record what was loaded, applicable rules, conflicts, exclusions, and unreadable/missing sources. Resolve conflicts by source authority, not retrieval rank or model confidence. Read-only knowledge routers are supported; their path list is not proof of understanding.
+For each task, first locate the feature in the system/feature map and existing work-item index, then read prior run receipts, defects, fixtures and execution assets. Reuse applicable understanding and verify only environment/version/role changes before continuing untested cases. If no feature entry exists, make a targeted discovery entry; do not repeat a full system exploration by default. Historical passes do not count as evidence for the current run. Record what was loaded, applicable rules, conflicts, exclusions, and unreadable/missing sources. Resolve conflicts by source authority, not retrieval rank or model confidence. Read-only knowledge routers are supported; their path list is not proof of understanding.
 
 ## Mode routing
 
@@ -33,15 +33,15 @@ Select and load the canonical skill; do not blend incompatible authority levels:
 - Business flows, assertions, current business knowledge: `.agents/skills/generate-business-assertions/SKILL.md`.
 - Formal cases, regression impact, test closure: `.agents/skills/test-case-generate/SKILL.md`.
 - Time-boxed testing before formal requirement/case artifacts: `.agents/skills/rapid-test/SKILL.md`.
-- 首轮 Web 语义/视觉探索：Ego Lite负责观察、执行和回读；Jev advisor 参与从有限只读候选动作中建议下一步。Jev 不得生成任意脚本/选择器/URL、执行写入、选择业务目标、改变预期或裁决结果；无配置、低置信、无进展及 Provider 错误均需显式阻塞/安全停止，按 `docs/web-ai-browser-stack.md` 和 `ai-test web-executor-check` 路由。
+- 首轮 Web 语义/视觉探索：Ego Lite负责观察、执行和回读；若 Jev advisor 已配置，它只能从有限只读候选动作中建议下一步。建议器不可用不阻断实际可用的执行器；实际浏览器控制缺失时只阻塞依赖 UI 的步骤，留下尝试与错误证据，继续功能地图/历史运行/Fixture/Oracle 等独立工作。按 `docs/web-ai-browser-stack.md` 和 `ai-test web-executor-check` 路由。
 - Offline synthetic test recordings (speech/silence): `.agents/skills/test-recording-generate/SKILL.md`; business Fixture creation and cleanup remain under `test-data-and-account-fixture-management`.
 - Web/API/App/H5/mini-app execution: `.agents/skills/requirement-grounded-functional-testing/SKILL.md`.
-- 首轮 Web 语义/视觉探索：默认由 Ego Lite 观察执行；若 Jev advisor 已配置，按 `docs/web-ai-browser-stack.md` 让 Jev 仅从本地生成的有限只读候选动作中建议下一步，Ego Lite 负责执行、回读并留存 advisory 收据。Jev 不得生成任意命令/选择器/URL、执行写入、挑选业务目标或裁定测试结果；不可用/低置信/无进展/Provider错误时安全停止。
+- 首轮 Web 语义/视觉探索：默认由 Ego Lite 观察执行；若 Jev advisor 已配置，按 `docs/web-ai-browser-stack.md` 让 Jev 仅从本地生成的有限只读候选动作中建议下一步，Ego Lite 负责执行、回读并留存 advisory 收据。Jev 不得生成任意命令/选择器/URL、执行写入、挑选业务目标或裁定测试结果；Provider 错误只阻断建议，不自动阻断实际测试。
 - Missed scenarios, user corrections, false positives: `.agents/skills/test-omission-risk-retrospective/SKILL.md`.
 - Reusable navigation, fixture, locator, recovery, environment or evidence learning: `.agents/skills/test-execution-asset-retrospective/SKILL.md`.
 - End-to-end lifecycle or unclear stage: `.agents/skills/ai-test-workflow/SKILL.md`.
 
-Rapid mode only temporarily defers the time-consuming formal requirement-specification, reviewed BF/A rule, and formal case-generation steps. It does not skip knowledge loading (including omission-risk rules), risk-based test design, action-before assertion/fixture/oracle freeze, evidence, triage, privacy, or execution logs. Rapid testing creates a temporary charter and versioned probes/assertions, not formal test cases or a new approved baseline; do not silently register probe lists as test cases. Its results are provisional and cannot claim full formal-baseline, acceptance, or release-gate coverage. Confirm mode entry and any non-routine business write; production/destructive/bulk/financial/real-notification operations retain their separate authorization gate. A defect, critical rule gap, release decision, repeated regression, or material side effect triggers standard-flow follow-up. One-off exploration may close with an explicit technical-debt owner and due date.
+Rapid mode only temporarily defers the time-consuming formal requirement-specification, reviewed BF/A rule, and formal case-generation steps. It does not skip knowledge loading (including omission-risk rules), risk-based test design, action-before assertion/fixture/oracle freeze, evidence, triage, privacy, or execution logs. Rapid testing creates a temporary charter and versioned probes/assertions, not formal test cases or a new approved baseline; do not silently register probe lists as test cases. Its results are provisional and cannot claim full formal-baseline, acceptance, or release-gate coverage. Confirm mode entry only when the user's task does not already establish it. A request to test import/export in SIT includes ordinary test-fixture preparation, UI import submission, readback and UI export in that stated scope; do not narrow it to read-only or seek repeated confirmation. Production, real notifications, irreversible deletion, financial settlement or writes outside the test scope retain a separate authorization gate. A defect, critical rule gap, release decision or repeated regression triggers standard-flow follow-up. One-off exploration may close with an explicit technical-debt owner and due date.
 
 ## Test plan before execution — mandatory for every new test task
 

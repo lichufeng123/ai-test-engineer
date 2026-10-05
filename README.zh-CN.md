@@ -10,7 +10,7 @@ AI Test Engineer 是一套可移植、以证据为先的 AI 测试工程框架�
 
 ## 同事从 Git 克隆预览分支
 
-先按[同事克隆与安装说明](docs/TEAM_CLONE_QUICKSTART.md)取得 `release/ai-test-engineer-0.13.0a1`、隔离安装并完成版本、单测和虚构 API 项目健康检查。[预览分支远端验证回执](docs/RELEASE_CANDIDATE_0.13.0a1.md)记录了真实 CI 和新克隆证据。当前是独立预览分支，不等于默认分支或正式业务发布；没有产品写入授权或报告晋升。
+先按[同事克隆与安装说明](docs/TEAM_CLONE_QUICKSTART.md)取得 GitLab 的 `lucifer/ai-test-engineer` 分支、隔离安装并完成版本、单测和虚构 API 项目健康检查。[预览分支远端验证回执](docs/RELEASE_CANDIDATE_0.13.0a1.md)仅记录历史 CI 和新克隆证据，不能代替本轮 SIT 产品测试。
 
 ## 跨客户端 Skill 与可选插件
 
@@ -33,20 +33,20 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 
 ## 测试工程师入口与快速测试
 
-`AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。开始测试还要按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取项目已有系统知识、已审核规则、遗漏风险、正式基线、执行资产和当前运行回执；每个模式遵循 [测试工程师思维协议](docs/TEST_ENGINEER_REASONING.md)。首轮 Web 探索由 Ego Lite 执行，并由 Jev 在受限只读候选动作中提供建议；[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
+`AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。接到具体功能测试，先查功能地图、已有工作项与历史测试/缺陷，快速复核本轮环境、角色和版本差异，再补测未验证的部分；历史通过不等于本轮通过。随后按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取适用知识、规则、风险和执行资产。首轮 Web 探索由 Ego Lite 执行；Jev 若可用，仅提供受限只读建议，[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
 
 每个新测试任务必须在首次页面/API/设备动作前保存测试计划包。标准模式以批准范围/用例基线、自动化准备度计划和执行前确认组成；快速模式以临时快速测试章程和版本化探针组成。快速测试只暂缓正式需求说明、BF/A规则审核和正式用例生成；仍须加载当前知识与遗漏风险规则，不会自行生成或批准正式用例，也不创建新基线。风险分析、关键动作前冻结断言/Fixture/独立Oracle、证据和问题定性仍必须执行。结果是临时结论，不得充当完整验收或发布门禁。按 `.agents/skills/rapid-test/SKILL.md` 执行，并使用[快速测试章程模板](templates/rapid-test-charter.example.json)及[Schema](schemas/rapid-test-charter.schema.json)。
 
 ## 首轮探索到可重复自动化的交接
 
-首轮Ego探索必须先列“为脚本化需要解决什么”：稳定身份和定位、独立Oracle、可安全停止/恢复的动作、等待条件、连续录屏及错误提示截图。run-local方法JSON、截图和聊天记录不是可执行测试。同功能重复执行前必须校验正式资产包中的runner、Oracle、与代码哈希绑定的测试回执、远端备份修订与连续录屏/错误截图计划：
+首轮Ego探索必须先列“为脚本化需要解决什么”：稳定身份和定位、独立Oracle、可安全停止/恢复的动作、等待条件、连续录屏及错误提示截图。run-local方法JSON、截图和聊天记录不是可执行测试。只有宣称同功能正式自动化回归时，才必须校验正式资产包中的runner、Oracle、与代码哈希绑定的测试回执、远端备份修订与连续录屏/错误截图计划。一次性 SIT 探针仍按本轮计划及证据执行，不把探索说成已验证回归：
 
 ```bash
 ai-test exploration-handoff-check --input runs/current/exploration-handoff.json \
   --root . --output runs/current/exploration-handoff-receipt.json
 ```
 
-[契约](schemas/exploration-handoff.schema.json)、[示例](templates/exploration-handoff.example.json)支持执行前与收口两阶段。收口还需核对视频文件、内容及逐断言截图中目标提示是否真的可见；只有弹窗“待导入”的截图不能证明错误提示。rapid重复执行门禁阻塞时不得宣称自动化回归，仍可另行计划只读诊断或经单独授权的应急恢复。本门禁只检验本地资产和复核声明，不替代业务写入授权、人审真实性、正式用例基线或产品验收。
+[契约](schemas/exploration-handoff.schema.json)、[示例](templates/exploration-handoff.example.json)支持执行前与收口两阶段。收口还需核对视频文件、内容及逐断言截图中目标提示是否真的可见；只有弹窗“待导入”的截图不能证明错误提示。rapid 的一次性 SIT 探针按本轮计划和证据独立执行；只有要把重复执行称为正式自动化回归时，才以该交接门禁判定资产是否就绪。本门禁只检验本地资产和复核声明，不替代业务权限、人审真实性、正式用例基线或产品验收。
 
 ## 团队 clone 后离线检查（M1 初版）
 

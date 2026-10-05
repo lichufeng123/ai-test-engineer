@@ -73,8 +73,7 @@
         "credentials_runtime_only",
         "high_risk_write_requires_approval",
         "agentic_output_requires_playwright_validation",
-        "stagehand",
-        "jev"
+        "stagehand"
       ],
       "properties": {
         "formal_expectations_immutable": {"const": true},

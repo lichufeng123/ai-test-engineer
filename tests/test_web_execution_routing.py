@@ -150,8 +150,18 @@ class WebExecutionRoutingTest(unittest.TestCase):
         self.assertEqual(plan["routes"]["new_feature_discovery"]["advisor"], "jev-advisor")
 
         plan["routes"]["new_feature_discovery"].pop("advisor")
+        plan["tools"] = [tool for tool in plan["tools"] if tool["id"] != "jev-advisor"]
+        plan["policies"].pop("jev")
         result = check_web_execution_routing(plan)
-        self.assertIn("JEV_FIRST_ROUND_ADVISOR_REQUIRED", result["error_codes"])
+        self.assertEqual(result["status"], "passed_with_pending_tools")
+        self.assertNotIn("jev-advisor", result["pending_tools"])
+
+    def test_declared_advisor_must_exist_and_stay_bounded(self):
+        plan = valid_plan()
+        plan["tools"] = [tool for tool in plan["tools"] if tool["id"] != "jev-advisor"]
+        result = check_web_execution_routing(plan)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("ROUTE_REFERENCES_UNKNOWN_TOOL", result["error_codes"])
 
     def test_jev_must_remain_bounded_advisory_and_read_only(self):
         plan = valid_plan()

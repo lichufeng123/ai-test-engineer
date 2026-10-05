@@ -5,7 +5,7 @@
 公司内网从 GitLab 取得（当前为该个人分支承载的框架线，历史与 `release` 无关，不要用它向 `release` 或默认分支发 MR）：
 
 ```bash
-git clone --branch lucifer/ai-test-engineer-0.13.0a1 --single-branch git@gitlab.meimeifa.com:yz-testing/tests-tools.git
+git clone --branch lucifer/ai-test-engineer --single-branch git@gitlab.meimeifa.com:yz-testing/tests-tools.git
 cd tests-tools
 ```
 

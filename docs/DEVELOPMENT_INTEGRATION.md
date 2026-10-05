@@ -1,6 +1,6 @@
 # 开发线整合与后续发布流（0.13 系列）
 
-当前开发分支为 `lucifer/ai-test-engineer-0.13.0a1`，跟踪公司 GitLab `gitlab.meimeifa.com:yz-testing/tests-tools.git` 的同名分支；本机工作树 `/Users/chenhao/Documents/test-tool/ai-test-engineer-integration` 是唯一开发位置。GitLab 是今后的权威远端，GitHub `origin` 只保留为历史来源，新提交默认推送 GitLab，GitHub 的 Actions 结果不算 GitLab CI 结果。
+当前开发分支为 `lucifer/ai-test-engineer`，跟踪公司 GitLab `gitlab.meimeifa.com:yz-testing/tests-tools.git` 的同名分支；本机工作树 `/Users/chenhao/Documents/test-tool/ai-test-engineer-integration` 是唯一开发位置。GitLab 是今后的权威远端，GitHub `origin` 只保留为历史来源，新提交默认推送 GitLab，GitHub 的 Actions 结果不算 GitLab CI 结果。
 
 该分支以通过多系统合成 CI 的框架发行提交 `7593b4a` 为基底，其历史与 tests-tools 的 `release` 分支没有共同祖先，因此不能向 `release`/默认分支发 MR；那样会整体替换公司仓库内容。若要把框架正式并入 tests-tools，先定目录位置，再在 `release` 之上以新增子目录的提交方式做，不使用强推或历史合并。
 

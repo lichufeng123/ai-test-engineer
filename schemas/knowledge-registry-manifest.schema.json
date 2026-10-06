@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-test/knowledge-registry-manifest.schema.json",
+  "title": "Local Knowledge Registry Manifest",
+  "description": "Contract for <private-repo>/knowledge/manifest.json, read by `ai-test knowledge-audit` and by the repository's own scripts/knowledge_registry.py. The manifest only routes and hash-binds local knowledge; it never defines product expectations.",
+  "type": "object",
+  "required": ["schema_version", "registry_id", "mode", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "registry_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string"},
+    "mode": {"const": "local_only"},
+    "updated_at": {"type": "string"},
+    "authoritative_policy": {"type": "string"},
+    "remote_sync": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"const": false},
+        "status": {"type": "string"},
+        "note": {"type": "string"}
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["entry_id", "path", "kind", "status", "modules", "sha256"],
+      "properties": {
+        "entry_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,127}$"},
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))",
+          "description": "Repository-relative POSIX path; must not be absolute or contain a '..' segment."
+        },
+        "kind": {
+          "enum": ["guide", "system_map", "business_topology", "rule_set", "test_method", "learning_inbox", "asset_register", "environment"]
+        },
+        "status": {
+          "enum": ["reviewed", "approved_test_method", "pending_review", "conflict_open", "deprecated"],
+          "description": "Only reviewed and approved_test_method entries may be returned as required_reads; pending_review is a candidate, never an approved expectation."
+        },
+        "modules": {"type": "array", "items": {"type": "string"}},
+        "keywords": {"type": "array", "items": {"type": "string"}},
+        "load_when": {
+          "type": "array",
+          "items": {"enum": ["all", "intake", "requirement", "assertion", "case_design", "readiness", "execution", "triage", "retrospective"]}
+        },
+        "platforms": {
+          "type": "array",
+          "items": {"enum": ["web", "app", "h5", "miniapp", "api", "device"]},
+          "description": "Optional restriction; an entry with a non-empty list is returned only when the requested platform matches."
+        },
+        "roles": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Optional restriction; an entry with a non-empty list is returned only when the requested role matches."
+        },
+        "always_load": {"type": "boolean"},
+        "priority": {"type": "integer", "minimum": 0},
+        "reason": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

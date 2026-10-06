@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/ai-test/knowledge-registry-load.schema.json",
+  "title": "Local Knowledge Registry Load Receipt",
+  "description": "Contract for the stdout of `<private-repo>/scripts/knowledge_registry.py load`. `ai-test knowledge-audit` re-checks every returned path and hash; this receipt never proves that an agent read or understood the files, and never certifies remote Current.",
+  "type": "object",
+  "required": ["status", "mode", "request", "required_read_count", "required_reads"],
+  "properties": {
+    "status": {"const": "passed"},
+    "mode": {"const": "local_only"},
+    "request": {
+      "type": "object",
+      "required": ["feature", "stage", "include_candidates"],
+      "properties": {
+        "feature": {"type": ["string", "null"]},
+        "stage": {
+          "type": ["string", "null"],
+          "enum": ["intake", "requirement", "assertion", "case_design", "readiness", "execution", "triage", "retrospective", null]
+        },
+        "platform": {"type": ["string", "null"]},
+        "role": {"type": ["string", "null"]},
+        "include_candidates": {
+          "const": false,
+          "description": "The framework gate blocks when candidates are included; pending_review knowledge is not an approved expectation."
+        }
+      }
+    },
+    "required_read_count": {"type": "integer", "minimum": 0},
+    "required_reads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["entry_id", "path", "absolute_path", "status", "sha256"],
+        "properties": {
+          "entry_id": {"type": "string"},
+          "kind": {"type": "string"},
+          "path": {"type": "string", "minLength": 1},
+          "absolute_path": {"type": "string", "minLength": 1},
+          "status": {"enum": ["reviewed", "approved_test_method"]},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "notice": {"type": "string"}
+  }
+}

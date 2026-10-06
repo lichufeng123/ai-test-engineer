@@ -24,8 +24,10 @@ from .guarded_run import execute_guarded_playwright
 from .synthetic_prepare import prepare_synthetic_guarded_run
 from .evidence_privacy import check_evidence_privacy
 from .knowledge_adapter import audit_local_baseline, audit_local_knowledge
+from .one_pass import check_one_pass
 from .execution_history import finish_execution, start_execution
 from .exploration_handoff import check_exploration_handoff
+from .private_repo import scaffold_private_repository
 from .project import STAGES, initialize_project, scaffold_playwright
 from .team_doctor import inspect_team_project
 from .skills import build_portable_plugin, install_portable_skills, validate_portable_skills
@@ -61,6 +63,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     scaffold = commands.add_parser("playwright-scaffold", help="安装无业务连接的分层Web自动化样板（不覆盖）")
     scaffold.add_argument("--root", default=".")
+
+    private_scaffold = commands.add_parser(
+        "private-scaffold",
+        help="安装受控私有资产仓库骨架（本地知识注册中心；不覆盖既有文件）")
+    private_scaffold.add_argument("--root", default=".", help="私有仓库目录；不存在时创建")
+    private_scaffold.add_argument("--name", help="项目显示名；仅当 ai-test.json 不存在时使用")
+    private_scaffold.add_argument("--system-id", help="稳定系统标识；仅当 ai-test.json 不存在时使用")
+    private_scaffold.add_argument("--environment", action="append", default=[])
+    private_scaffold.add_argument("--platform", action="append",
+                                  choices=["web", "api", "app", "h5", "miniapp"], default=[])
+    private_scaffold.add_argument("--registry-id", help="知识注册中心稳定标识；默认由 system-id 派生")
+    private_scaffold.add_argument("--title", help="知识注册中心标题")
 
     doctor = commands.add_parser("doctor", help="只读离线检查团队clone和项目安装；不授权业务执行")
     doctor.add_argument("--root", default=".", help="ai-test init生成的项目目录")
@@ -120,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
     local_baseline.add_argument("--private-root", required=True)
     local_baseline.add_argument("--requirement-id", required=True)
 
+    one_pass = commands.add_parser("one-pass-check", help="检查一站式临时用例计划/执行回执；不执行产品操作或批准业务结论")
+    one_pass.add_argument("--input", required=True, help="已保存的一站式运行计划 JSON")
+    one_pass.add_argument("--results", help="同run逐用例结果 JSON；省略时只作执行前检查")
+    one_pass.add_argument("--root", default=".")
+    one_pass.add_argument("--output", help="可选：保存结构化检查回执")
+
     work_create = commands.add_parser("work-item-create", help="为一个测试需求创建独立状态与接手包")
     work_create.add_argument("--root", default=".")
     work_create.add_argument("--requirement-id", required=True)
@@ -130,7 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--platform", action="append", required=True, choices=["web", "app", "h5", "miniapp"], dest="platforms"
     )
     work_create.add_argument("--scope", required=True)
-    work_create.add_argument("--test-mode", choices=["standard", "rapid"], default="standard")
+    work_create.add_argument("--test-mode", choices=["standard", "rapid", "one_pass"], default="standard")
 
     work_show = commands.add_parser("work-item-show", help="读取一个需求并给出新任务接手上下文")
     work_show.add_argument("--root", default=".")
@@ -157,7 +177,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="add_platforms",
     )
     work_update.add_argument("--scope")
-    work_update.add_argument("--test-mode", choices=["standard", "rapid"])
+    work_update.add_argument("--test-mode", choices=["standard", "rapid", "one_pass"])
     work_update.add_argument("--baseline-id")
     work_update.add_argument("--baseline-path")
     work_update.add_argument("--baseline-sha256")
@@ -330,6 +350,12 @@ def main(argv=None) -> int:
                                         environments=args.environment, platforms=args.platform))
     if args.command == "playwright-scaffold":
         return _emit(scaffold_playwright(Path(args.root)))
+    if args.command == "private-scaffold":
+        return _emit(scaffold_private_repository(
+            Path(args.root), name=args.name, system_id=args.system_id,
+            environments=args.environment, platforms=args.platform,
+            registry_id=args.registry_id, title=args.title,
+        ))
     if args.command == "doctor":
         return _emit(inspect_team_project(Path(args.root), Path(args.framework_root),
                                           private_root=Path(args.private_root) if args.private_root else None,
@@ -359,6 +385,15 @@ def main(argv=None) -> int:
                                            module_id=args.module_id))
     if args.command == "baseline-snapshot":
         return _emit(audit_local_baseline(Path(args.private_root), args.requirement_id))
+    if args.command == "one-pass-check":
+        value = check_one_pass(_read(args.input), Path(args.root),
+                               results=_read(args.results) if args.results else None,
+                               plan_path=Path(args.input) if args.results else None)
+        if args.output:
+            output = Path(args.output)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return _emit(value)
     if args.command == "work-item-create":
         return _emit(create_work_item(
             Path(args.root), requirement_id=args.requirement_id, title=args.title,

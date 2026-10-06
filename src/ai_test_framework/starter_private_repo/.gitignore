@@ -1,0 +1,47 @@
+# Private test asset repository — never commit secrets or run evidence.
+
+# Credentials and local runtime configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+.auth/
+.playwright/
+playwright/.auth/
+storage-state.json
+*.pem
+*.key
+*.p12
+
+# Run evidence: screenshots, videos, downloads, traces and generated reports
+runs/
+test_runs/
+outputs/
+reports/
+playwright-report/
+test-results/
+*.har
+*.zip
+*.mp4
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.xlsx
+*.csv
+*.pdf
+
+# Local generated fixtures; checked-in contracts live outside these paths
+fixtures/generated/
+fixtures/local/
+
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS noise
+.DS_Store
+Thumbs.db

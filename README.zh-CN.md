@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a3 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a5 -->
 
 # AI Test Engineer
 
@@ -36,6 +36,8 @@ ai-test plugin-build --root . --output ./dist/ai-test-engineer
 `AGENTS.md` 同时承载测试工程师思维宪法和任务路由，不只是 Skills 清单。接到具体功能测试，先查功能地图、已有工作项与历史测试/缺陷，快速复核本轮环境、角色和版本差异，再补测未验证的部分；历史通过不等于本轮通过。SIT 任务在打开登录页前从经审核账号索引选定唯一的非敏感账号别名、角色与组织，已有匹配登录态直接复用；没有唯一账号时只在任务开始问一次，不在每次登录时重复请示。密码只在安全运行时或交接成功后的浏览器中输入，`UI not available` 不能当作交接成功。随后按 [测试上下文索引](docs/TEST_CONTEXT_INDEX.md) 读取适用知识、规则、风险和执行资产。首轮 Web 探索由 Ego Lite 执行；Jev 若可用，仅提供受限只读建议，[浏览器工具栈](docs/web-ai-browser-stack.md)定义其边界。关于反馈、系统辨识与可观测性的工作流优化，见[《工程控制论》映射](docs/ENGINEERING_CYBERNETICS_WORKFLOW.md)。
 
 每个新测试任务必须在首次页面/API/设备动作前保存测试计划包。标准模式以批准范围/用例基线、自动化准备度计划和执行前确认组成；快速模式以临时快速测试章程和版本化探针组成。快速测试只暂缓正式需求说明、BF/A规则审核和正式用例生成；仍须加载当前知识与遗漏风险规则，不会自行生成或批准正式用例，也不创建新基线。风险分析、关键动作前冻结断言/Fixture/独立Oracle、证据和问题定性仍必须执行。结果是临时结论，不得充当完整验收或发布门禁。按 `.agents/skills/rapid-test/SKILL.md` 执行，并使用[快速测试章程模板](templates/rapid-test-charter.example.json)及[Schema](schemas/rapid-test-charter.schema.json)。
+
+希望一次完成“用例生成 → 执行 → 报告”且不逐阶段等审核时，使用 `--test-mode one_pass` 和 [one-pass-test](.agents/skills/one-pass-test/SKILL.md)。仍先完整加载业务知识和遗漏风险规则，再保存有来源哈希、唯一Fixture、逐步预期、独立Oracle和证据计划的临时 `OP-*` 用例。运行 `ai-test one-pass-check --input <计划.json> --root <项目>` 并把可见用例展示给用户，接着连续执行已就绪项；预期未知的单项阻塞。完成后逐用例写实际值/证据并执行 `one-pass-check --input <计划.json> --results <结果.json> --root <项目>`，再交付逐场景报告。结构检查不执行产品测试、不批准业务预期；结果仍为临时结论，正式 `CASE_DESIGN` 门禁不变。见[计划契约](schemas/one-pass-test-plan.schema.json)、[结果契约](schemas/one-pass-test-results.schema.json)和[示例](templates/one-pass-test-plan.example.json)。
 
 ## 首轮探索到可重复自动化的交接
 
@@ -90,7 +92,7 @@ ai-test work-item-create --root ./my-test-project \
   --environment sit --platform web --scope "本轮测试范围"
 ```
 
-之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供当前与历史标准需求、快速测试及待分类旧任务的人类可读分区总览；快速任务创建时显式指定 `--test-mode rapid`，旧记录不根据标题猜测。
+之后即使更换 Codex、WorkBuddy 或其他 Agent，也只需说“接手需求 REQ-XXX”。Agent 应自动运行 `ai-test work-item-show --root . --requirement-id REQ-XXX` 并恢复当前阶段、已完成内容、阻塞、下一步、正式基线和已有资产。根目录的 `TEST_WORK_ITEMS.md` 提供当前与历史标准需求、快速测试、一站式测试及待分类旧任务的人类可读分区总览；快速任务创建时显式指定 `--test-mode rapid`，一站式任务指定 `--test-mode one_pass`，旧记录不根据标题猜测。
 
 需求、规则、用例、执行包或报告产出后，使用 `work-item-artifact-register` 登记稳定产物ID、路径、SHA-256、审核状态和对应阶段；登记后工作项阶段自动推进。`work-item-reconcile` 对账文件缺失、哈希变化、状态落后、历史孤立产物以及 `CASE_DESIGN` 前的准备度计划和规则审核回执，避免“对话里已生成、工作项仍显示未生成”。
 
@@ -270,6 +272,20 @@ ai-test video-check \
 首次执行负责学习并沉淀；后续回归先加载资产，只校验入口、关键控件、数据前置和版本差异。单个 UI 操作超过两分钟没有页面、接口、下载、日志或状态进展时，应保存已有证据并报告卡点。
 
 完整规范见[框架手册](docs/FRAMEWORK.md)，具体步骤见 [Playbooks](playbooks/README.md)。
+
+## 私有资产仓库
+
+真实账号、内部域名、业务规则、私有协作文档、真实截图和执行证据不得进入本公开仓库。它们应保存在受控的私有资产仓库中，并通过文档化的只读边界接入。用脚手架创建，不要手工拼目录：
+
+```bash
+ai-test private-scaffold --root ./my-private-assets \
+  --name "示例产品" --system-id example-products \
+  --environment sit --platform web
+```
+
+脚手架写入项目画像、`knowledge/` 注册中心、参考 `scripts/knowledge_registry.py`、排除凭据与运行证据的 `.gitignore` 以及接入说明。它不覆盖任何既有文件，并写入真实 SHA-256，因此注册中心生成后立即可通过校验。
+
+私有仓库是 `ai-test` 命令的项目根（`--root <private-repo>`）。跨边界只有三个只读命令：`knowledge-audit`、`baseline-snapshot`、`doctor --private-root`。契约见 `schemas/knowledge-registry-manifest.schema.json` 与 `schemas/knowledge-registry-load.schema.json`；回执通过只证明本地路径与哈希一致，不证明 Agent 已读文件，不代表远端 Current，也不授权任何业务写入。只有 `reviewed` 与 `approved_test_method` 条目可作为 `required_reads`，`pending_review` 候选永远不进入正式预期。详见[私有资产仓库接入](docs/PRIVATE_REPOSITORY_INTEGRATION.md)。
 
 ## 项目结构
 

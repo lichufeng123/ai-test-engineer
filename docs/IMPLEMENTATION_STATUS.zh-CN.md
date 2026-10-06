@@ -1,9 +1,13 @@
+<!-- FRAMEWORK_VERSION: 0.13.0a5 -->
+
 # AI Test Engineer 实现状态与跨客户端交接
 
-更新日期：2026-09-15
-框架版本：0.6.0
+更新日期：2026-10-06
+框架版本：0.13.0a5
 默认分支：`main`
 公开仓库：`lichufeng123/ai-test-engineer`
+
+> 本文件与 `README.md`、`README.zh-CN.md`、`docs/FRAMEWORK.md` 一同受 `ai-test docs-check` 的版本标记校验；版本不一致会使文档检查失败。
 
 ## 1. 项目目标
 
@@ -13,16 +17,16 @@
 
 ## 2. 仓库与安全边界
 
-- 本仓库是通用公开框架的唯一开发仓库。
+- 本仓库是通用公开框架的开发仓库，只包含框架、Schema、模板、脱敏示例和通用适配器。
 - 团队历史测试仓库不属于本项目，不得修改、改名、提交或调整远程配置。
-- 公开仓库不得包含内部域名、账号、密码、Cookie、Token、真实客户数据、内部飞书链接、未脱敏截图、私有业务规则或内部执行报告。
-- 组织私有知识库、文档平台和缺陷平台通过私有适配器接入，不进入通用核心。
+- 公开仓库不得包含内部域名、账号、密码、Cookie、Token、真实客户数据、内部协作文档链接、未脱敏截图、私有业务规则或内部执行报告。
+- 真实业务资产保存在**私有资产仓库**或受控文件空间；框架通过 `ai-test knowledge-audit`、`ai-test baseline-snapshot` 和 `ai-test doctor --private-root` 只读桥接，不复制私有内容。
 
 ## 3. 当前架构
 
 ### 3.1 可移植 Skills
 
-唯一源码目录为 `.agents/skills/`：
+唯一源码目录为 `.agents/skills/`，当前 11 个 Skill：
 
 1. `ai-test-workflow`：完整测试生命周期路由。
 2. `requirement-spec-generate`：需求说明、业务拓扑候选和自动化准备度输入。
@@ -31,226 +35,118 @@
 5. `requirement-grounded-functional-testing`：受控执行、证据、问题定性与报告。
 6. `test-execution-asset-retrospective`：执行结束后的页面、数据、环境和自动化资产反哺。
 7. `rapid-test`：尚无正式基线时的有边界临时探针。
-8. `test-data-and-account-fixture-management`：测试数据和账号 Fixture 的受控生命周期。
-9. `test-omission-risk-retrospective`：遗漏风险规则的审查受控反哺。
+8. `one-pass-test`：一轮内生成可见临时 `OP-*` 用例、执行已就绪场景并报告。
+9. `test-data-and-account-fixture-management`：测试数据和账号 Fixture 的受控生命周期。
+10. `test-omission-risk-retrospective`：遗漏风险规则的审查受控反哺。
+11. `test-recording-generate`：离线合成语音/静音录音与清单。
 
-用户可选用 `skills-install` 将通用 Skill 安装到用户级 `~/.agents/skills` 和兼容目录；仓库 `.agents/skills` 是唯一源码。插件包由 `plugin-build` 临时生成，不维护第二套 Skill 源码。
-
-### 3.1.1 WorkBuddy 中出现两组同名 Skill
-
-在 WorkBuddy 直接打开 `ai-test-engineer` 仓库时，界面会同时发现：
-
-- “用户”：来自 `~/.agents/skills` 的用户级安装。
-- “AI测试工程师”：来自当前仓库 `.agents/skills` 的项目级 Skill。
-
-若用户另行安装同名通用 Skill，用户级入口应解析到仓库同一份 `SKILL.md`，不应维护第二套副本。WorkBuddy 按作用域优先使用更具体的项目级 Skill，因此可能同时显示用户级与项目级入口；未执行 `skills-install` 的新同事不会天然具备用户级入口。
-
-用户自行安装的私有适配 Skill 不属于公开仓库的通用 Skill 清单；在普通业务项目中，若项目没有同名 `.agents/skills`，通常会显示用户级 Skill。不要将私有适配器打包到公开交付物。
-
-不要为消除界面重复而删除仓库 `.agents/skills`，它是公开项目的 canonical 源码；删除用户级符号链接则会导致其他项目无法全局发现这些 Skill。开发框架时可直接查看项目级分类，处理其他项目时使用用户级分类。
+用户可选用 `skills-install` 将通用 Skill 安装到用户级目录；仓库 `.agents/skills` 是唯一源码。插件包由 `plugin-build` 临时生成，不维护第二套 Skill 源码。
 
 ### 3.2 核心 CLI
 
-当前命令：
+`ai-test` 当前提供 32 个子命令：
 
-- `init`：初始化测试项目。
-- `discovery-plan`：判断全局探索、增量探索或轻量资产校验。
-- `docs-check`：校验 README、手册和版本同步。
-- `evidence-check`：校验截图、媒体和报告引用。
-- `data-generate`：生成带清单、哈希、预期和清理策略的测试数据。
-- `flow-check`：校验业务流程、原子断言和端到端用例覆盖。
-- `case-granularity-check`：识别大量规则被少量大用例过度合并的问题。
-- `skills-check`：校验 Skill 结构和分发状态。
-- `skills-install`：安装跨客户端用户级 Skill。
-- `plugin-build`：从唯一 Skill 源构建 Codex 插件包。
-- `readiness-plan`：需求审核后冻结环境、角色、数据、证据和自动化范围。
-- `readiness-check`：执行前复核计划哈希及当前前置条件。
-- `video-check`：使用 ffprobe/ffmpeg 检查视频时长、黑帧和静止区间，输出机器可读质量回执。
+- **项目与分发**：`init`、`private-scaffold`、`playwright-scaffold`、`skills-check`、`skills-install`、`plugin-build`、`docs-check`、`doctor`。
+- **探索与需求**：`discovery-plan`、`flow-check`、`case-granularity-check`、`permission-check`。
+- **准备度与执行**：`readiness-plan`、`readiness-check`、`probe-check`、`env-resolve`、`write-intent-reserve`、`execution-log-start`、`execution-log-finish`。
+- **自动化资产**：`automation-asset-reuse-check`、`automation-outcome-check`、`synthetic-run-prepare`、`guarded-web-run`、`playwright-receipts-check`。
+- **证据与报告**：`evidence-check`、`video-check`、`privacy-check`、`report-promotion-check`、`adapter-trace-check`、`web-executor-check`。
+- **数据与知识**：`data-generate`、`knowledge-audit`、`baseline-snapshot`。
+- **工作项**：`work-item-create`、`work-item-show`、`work-item-list`、`work-item-update`、`work-item-artifact-register`、`work-item-reconcile`。
+- **一站式**：`one-pass-check`。
 
-### 3.3 执行适配器
+### 3.3 私有资产仓库接入（0.13.0a5 新增）
 
-- Playwright Test：Web正式回归、接口监听、下载、截图、视频和Trace。
+- `ai-test private-scaffold --root <dir>` 安装受控私有仓库骨架：项目画像、`knowledge/` 注册中心、参考 `scripts/knowledge_registry.py`、`.gitignore` 与接入说明；不覆盖既有文件。
+- 骨架写入真实 SHA-256，因此生成后立即可通过 `knowledge_registry.py validate`。
+- 契约文档化为 `schemas/knowledge-registry-manifest.schema.json` 与 `schemas/knowledge-registry-load.schema.json`。
+- 说明见 [私有资产仓库接入](PRIVATE_REPOSITORY_INTEGRATION.md)。
+- 桥接回执只证明本地路径与哈希一致；不证明 Agent 已读或理解，不代表远端 Current，不授权任何业务写入。
+
+### 3.4 执行适配器
+
+- Playwright Test：Web 正式回归、接口监听、下载、截图、视频和 Trace。
 - Ego Lite：新需求首轮语义/视觉探索、人工登录态复用和失败现场复核。
-- Playwright MCP：可选的Playwright定位器生成与复核，不作为脚本编写前置条件。
+- Jev（可选）：仅从有限只读候选动作中建议下一步，`advisory_only`。
+- Playwright MCP：可选的定位器生成与复核，不作为脚本编写前置条件。
 - Chrome DevTools MCP：网络、Console、性能和浏览器现场诊断。
-- Stagehand：受控生成定位器、等待条件和已知瞬态弹窗修复候选，必须回到Playwright验证。
+- Stagehand：受控生成定位器、等待条件和已知瞬态弹窗修复候选，必须回到 Playwright 验证。
+- agent-device：AI-first 移动设备执行器适配器。
 - Minium：小程序关键业务、异常、权限、幂等和一致性。
-- MiniTest：规划用于云真机、兼容、性能、版本回归和CI门禁。
-- 组织私有适配器：飞书、知识库和缺陷平台等内部连接。
 
 ## 4. 已完成能力
 
-### 4.0 一需求一任务与跨客户端接手
+- 一需求一任务：`work-item-*` 独立状态、产物登记与对账；`TEST_WORK_ITEMS.md` 人类总览。
+- 系统与功能探索：`discovery-plan` 区分全局探索、增量探索与轻量资产校验。
+- 需求与业务规则：业务拓扑四分类、`BF-*` / `A-*` 双层规则、`flow-check` 覆盖率门禁。
+- 测试用例质量：唯一正式基线、端到端覆盖校验、`case-granularity-check` 防止规则被压缩进少量大用例。
+- 自动化准备度：`readiness-plan` / `readiness-check` 冻结环境、角色、数据、证据与排除项。
+- 测试数据：声明式生成、fixture 清单、SHA-256、预期与清理策略。
+- 执行与证据：截图、视频、接口、日志、下载与下游回读；问题定性八分类。
+- 视频证据技术门禁：`video-check` 使用 ffprobe/ffmpeg 检测时长、黑帧与静止区间。
+- 报告门禁：`evidence-check`、`privacy-check`、`report-promotion-check` 阻断证据缺失或隐私越界。
+- 一站式模式：`one-pass-check` 在执行前校验冻结计划，在收口时校验逐步结果。
+- 私有仓库接入：`private-scaffold` 脚手架、两份知识注册中心 Schema 与接入文档。
+- 离线合成录音：`test-recording-generate`（依赖 ffmpeg/ffprobe，macOS `say`）。
 
-- 使用 `work-item-create` 为每个需求生成独立状态与交接包。
-- 使用 `work-item-show` 让新任务恢复当前阶段、完成项、阻塞、下一步、正式基线和资产入口。
-- 使用 `work-item-update` 同步进展，并自动更新 `handoff.json`、机器索引和 `TEST_WORK_ITEMS.md`。
-- 不再为新项目创建共享的根级 `.ai-test/workflow_state.json`；旧文件只作为历史兼容材料，不作为新任务状态源。
-- 普通使用者只需记住“建立测试任务”和“接手需求 REQ-XXX”，详细命令由 Agent 执行。
-
-### 4.1 系统与功能探索
-
-- 第一次没有资产时提示并执行系统全局探索。
-- 已有资产时只做轻量有效性检查和变化部分探索。
-- 支持 Web、App、H5 和小程序平台登记。
-- App 提供 H5 时区分 H5 业务面与 App 容器差异。
-
-### 4.2 需求和业务规则
-
-- 从系统地图、角色、实体、接口和上下文推导具体上下游候选。
-- 业务拓扑区分 `isolated`、`linked_confirmed`、`linked_candidate`、`pending`。
-- 使用 `BF-*` 表达参与者、平台、步骤、状态和下游回读。
-- 使用 `A-*` 表达单个可独立验证的业务约束。
-- 分别计算业务流程覆盖率和原子规则覆盖率。
-
-### 4.3 测试用例质量
-
-- 保持唯一正式测试用例基线，自动化执行包只引用该基线。
-- 校验每条确认流程至少有一条端到端用例。
-- 校验规则与用例的双向覆盖关系。
-- `case-granularity-check` 防止大量断言被压缩进少量不可定位的大用例。
-
-### 4.4 自动化准备度
-
-- 需求审核后生成 `automation_readiness_plan`。
-- 冻结功能、版本、环境、用例范围、角色、fixture、证据点和排除项。
-- 用例审核后绑定稳定用例 ID 并重新冻结哈希。
-- 执行前生成 `pre_execution_confirmation` 并运行 `readiness-check`。
-- 缺少角色或数据时只阻塞关联用例；相同前置指纹未变化前不反复重试。
-
-### 4.5 测试数据
-
-- 支持声明式数据生成。
-- 输出语义化文件名、fixture 清单、SHA-256、预期结果和清理策略。
-- 区分可复用数据、一次性运行数据和敏感运行配置。
-
-### 4.6 执行、证据与问题定性
-
-- 测试结论可关联截图、视频、接口、日志、下载文件和下游回读。
-- Web截图默认1920×1080，低于1600需要补拍。
-- 区分产品缺陷、环境问题、数据问题、脚本问题、设计如此、待优化和证据不足。
-- UI单步超过规定时间无进展时停止并保存证据。
-- 受控自愈要求保留原因分类、补丁、单用例验证和影响回归回执。
-
-### 4.7 视频证据质量检查（第一阶段）
-
-- 已定义 `video-check` 输入 Schema 和视频质量回执 Schema。
-- 支持逐视频声明预期时长，并按全局默认值或单视频配置覆盖黑帧、静止检测阈值。
-- 使用 ffprobe 读取时长和分辨率，使用 ffmpeg `blackdetect`、`freezedetect` 提取具体异常区间。
-- 输出 `passed`、`trim_required`、`rerecord_required`、`blocked` 处置结果，以及输入/视频哈希、命中占比、问题代码和建议动作。
-- 限制输入只能引用运行根目录内的相对路径；缺文件、不可读或工具不可用时明确阻塞。
-- 回执明确标识第一阶段未执行视频内容语义审查，不能把技术检查通过解释为流程内容审核通过。
-- 已提供不包含真实视频、业务数据、内部地址或凭据的输入与回执示例。
-
-### 4.8 Skill分发与质量
-
-- 跨客户端 Skill 使用 `.agents/skills` 作为唯一源码。
-- 支持安装到用户级通用目录和 Codex 兼容目录。
-- 支持由 canonical Skills 构建插件包。
-- 当前核心单元测试共48项，全部通过。
-
-## 5. 已完成但仍需增强的能力
+## 5. 仍需增强的能力
 
 ### 5.1 报告证据门禁
 
-已能校验图片尺寸、文件存在性和 Markdown 引用；流程规范要求发布后回读图片和视频。仍需把团队报告平台的自动修复做成正式的通用 Provider 接口。
+已能校验图片尺寸、文件存在性与 Markdown 引用；仍需把团队报告平台的自动修复做成正式的通用 Provider 接口。
 
 ### 5.2 执行资产反哺
 
-已有 Skill、目录模型和回执要求。仍需加强自动化脚本质量评分、资产失效检测、远程版本回执和跨项目索引。
+已有 Skill、目录模型和回执要求；仍需自动化脚本质量评分、资产失效检测、远程版本回执和跨项目索引。
 
 ### 5.3 小程序自动化
 
-已有 Minium/MiniTest 职责划分和适配说明。仍需增加可直接运行的项目模板、连接诊断、云真机执行回执和 CI 示例。
+已有 Minium 职责划分和适配说明；仍需可直接运行的项目模板、连接诊断、云真机执行回执和 CI 示例。
 
 ### 5.4 受控自愈
 
-已定义允许修复定位、等待和兼容分支，禁止静默修改业务预期。仍需实现标准补丁回执、影响范围计算和失败聚类工具。
+已定义允许修复定位、等待和兼容分支；仍需标准补丁回执、影响范围计算和失败聚类工具。
+
+### 5.5 私有仓库桥接
+
+已提供骨架与契约；仍需：知识注册中心的平台/角色过滤在既有私有实现中落地、`baseline-snapshot` 的远端 Current 适配器、以及把既有私有仓库对齐到当前契约的迁移命令。
 
 ## 6. 待优化事项
 
-### P1：视频内容语义检查（第二阶段）
-
-第一阶段技术门禁已经完成。后续目标是识别错误页面、任务名称或难度不匹配、关键步骤缺失、轮次与最终结果缺失等内容问题。
-
-建议实现：
-
-- 复用第一阶段输入中的 `step_labels`，增加可审核的期望页面与关键步骤契约。
-- 抽取代表性关键帧，并把模型结论与时间点、帧哈希和人工复核状态绑定。
-- 区分“技术质量通过”和“内容流程通过”，禁止用文件存在或黑帧检查替代语义审查。
-- 视频仍不能替代关键结果截图。
-
 ### P0：通用报告平台 Provider
 
-目标：把发布前检查、媒体上传、媒体移动、发布后回读和自动修复抽象成通用接口。
-
-建议实现：
-
-- 定义 `ReportProvider` 协议。
-- 本地 Markdown Provider 作为参考实现。
-- 组织内部飞书适配放在私有层。
-- 输出发布修订号、正文哈希、媒体数量和修复动作回执。
+定义 `ReportProvider` 协议，本地 Markdown Provider 作为参考实现，组织内部适配放在私有层；输出发布修订号、正文哈希、媒体数量和修复动作回执。
 
 ### P0：测试资产检索和有效性检查
 
-目标：测试开始前先查询是否已有系统地图、流程、数据和自动化代码。
+定义本地 JSON 资产索引格式；新增 `asset-index`、`asset-search`、`asset-validate`；按系统、功能、环境、平台、版本和状态检索。
 
-建议实现：
+### P1：视频内容语义检查（第二阶段）
 
-- 定义本地 JSON 资产索引格式。
-- 新增 `asset-index`、`asset-search`、`asset-validate`。
-- 按系统、功能、环境、平台、版本和状态检索。
-- 输出资产命中、失效原因和需要增量探索的范围。
-- 知识库、向量库和远程Git通过 Provider 接入。
+复用 `step_labels`，增加可审核的期望页面与关键步骤契约；抽取关键帧并把模型结论与时间点、帧哈希和人工复核状态绑定；区分"技术质量通过"与"内容流程通过"。
 
 ### P1：缺陷提交 Provider
 
-目标：将失败结果和证据生成标准缺陷草稿，并在人工确认后提交。
-
-建议实现：
-
-- 定义 `defect_draft.schema.json`。
-- 聚合标题、严重程度、版本、步骤、实际、预期、截图、视频、cURL和响应。
-- 默认只生成草稿和 dry-run 回执。
-- 外部提交必须显式授权，不把账号或Token写入资产。
+定义 `defect_draft.schema.json`；聚合标题、严重程度、版本、步骤、实际、预期、截图、视频、cURL 和响应；默认只生成草稿和 dry-run 回执。
 
 ### P1：测试数据生命周期
 
-目标：回归前判断历史fixture是否存在、被修改、可复用或需要重建。
-
-建议实现：
-
-- 新增 fixture 健康检查和前置指纹。
-- 检查存在性、哈希、版本、业务状态和过期时间。
-- 输出 `reuse`、`regenerate`、`repair`、`blocked`、`cleanup_required`。
+新增 fixture 健康检查和前置指纹；输出 `reuse`、`regenerate`、`repair`、`blocked`、`cleanup_required`。
 
 ### P1：研发变更影响输入
 
-目标：让前后端提测时提供统一影响面，AI再结合系统地图补充场景。
+定义 `change_impact_input.schema.json`；生成需求规则、历史用例和变更项之间的影响矩阵。
 
-建议实现：
+## 7. 推荐接手顺序
 
-- 定义 `change_impact_input.schema.json`。
-- 字段包括代码模块、接口、数据结构、页面、角色、状态、兼容、下游和已知限制。
-- 生成需求规则、历史用例和变更项之间的影响矩阵。
-
-### P1：执行效率与质量指标
-
-目标：量化首次测试与资产复用回归的差异。
-
-建议指标：首次探索耗时、回归耗时、自动执行率、人工介入次数、资产复用率、有效缺陷数、误报率、证据完整率和脚本修复次数。
-
-## 7. 推荐 WorkBuddy 接手顺序
-
-第一项建议实现 **本地测试资产索引和有效性检查**。先完成通用 JSON 与本地 Provider，再接入私有知识库。
-
-第二项建议实现 **缺陷草稿 Schema 和 dry-run**。正式提交适配器放在私有层，并保留人工确认门禁。
-
-第三项建议评审 **视频内容语义检查第二阶段** 的输入契约和人工复核边界，不能直接把模型判断作为正式审核结论。
+1. 评审并合并本分支的私有仓库接入与文档修复。
+2. 实现**测试资产索引和有效性检查**（P0）。
+3. 实现**缺陷草稿 Schema 和 dry-run**（P1），正式提交适配器放私有层。
+4. 评审**视频内容语义检查第二阶段**的输入契约与人工复核边界。
 
 每项实现必须：
 
-1. 先阅读 `README.zh-CN.md`、`docs/FRAMEWORK.md`、本文件和相关 Skill。
+1. 先阅读 `README.md`、`README.zh-CN.md`、`docs/FRAMEWORK.md`、本文件和相关 Skill。
 2. 不建立第二套需求、规则或测试用例基线。
 3. 更新 CLI、Schema、模板、Playbook、README 和完整手册。
 4. 增加必要的单元测试和脱敏示例。
@@ -267,10 +163,9 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 ## 8. 当前验证基线
 
-- `main` 当前提交：`6bfc2bc`，提交说明为“新增自动化准备度规划与执行前复核”。
-- 本次开发基线提交：`6bfc2bc`，提交说明为“新增自动化准备度规划与执行前复核”。
-- 框架版本：0.6.0。
-- 单元测试、文档检查和 Skill 检查以本次提交前的最终执行回执为准。
-- `video-check` 依赖运行环境提供 ffprobe/ffmpeg；缺失时输出 `blocked`，不静默跳过。
-
-后续开发开始前应重新执行 `git status`、单元测试、文档检查和 Skill 检查，以当前主分支输出为准。
+- 框架版本：0.13.0a5。
+- 单元测试：195 项以上（含 `private-scaffold` 与知识注册中心契约测试），全部通过。
+- `docs-check`：通过，且已覆盖本文件的版本标记。
+- `skills-check`：通过，11 个 Skill。
+- `video-check` 与 `test-recording-generate` 依赖运行环境提供 ffprobe/ffmpeg；缺失时输出 `blocked`，不静默跳过。
+- 后续开发开始前应重新执行 `git status`、单元测试、文档检查和 Skill 检查，以当前分支输出为准。

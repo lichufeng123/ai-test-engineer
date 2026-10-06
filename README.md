@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a3 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a5 -->
 
 # AI Test Engineer
 
@@ -33,6 +33,8 @@ The generated package contains `.codex-plugin/plugin.json` and the plugin-requir
 
 Every new test task must have a saved test-plan package before its first page/API/device action. Standard tasks use the approved scope/case baseline, automation-readiness plan, and pre-execution confirmation; rapid tasks use a provisional rapid charter plus versioned probes. Rapid testing may defer only the formal requirement specification, reviewed BF/A rule production, and formal case generation; it must still load current knowledge and omission-risk rules, and it does not generate or approve formal test cases or a new baseline. It still requires risk analysis, assertion/fixture/independent-oracle freeze before consequential actions, evidence, and triage. Results are provisional, not full acceptance or release-gate outcomes. Follow `.agents/skills/rapid-test/SKILL.md` and use [the rapid charter template](templates/rapid-test-charter.example.json) with [its schema](schemas/rapid-test-charter.schema.json).
 
+For a single uninterrupted pass from provisional case design through execution and report, select `--test-mode one_pass` (or update an existing work item for future runs) and follow [one-pass-test](.agents/skills/one-pass-test/SKILL.md). Read all applicable knowledge and omission risks, freeze source-linked `OP-*` cases with steps, independent oracles and evidence before any product action, run `ai-test one-pass-check --input <plan.json> --root <project>`, and show the case preview to the user. Execute ready cases without repeated ordinary review prompts; blocked expectations stay blocked. Record every case and step in a separate results file and run `one-pass-check --input <plan.json> --results <results.json> --root <project>` before the scenario-level report. This structural gate neither executes tests nor approves business expectations; results remain provisional, and formal `CASE_DESIGN` still requires its reviewed artifacts. See [plan schema](schemas/one-pass-test-plan.schema.json), [results schema](schemas/one-pass-test-results.schema.json) and [example](templates/one-pass-test-plan.example.json).
+
 ## Quick start
 
 ```bash
@@ -54,7 +56,7 @@ ai-test work-item-create --root ./my-test-project \
   --environment sit --platform web --scope "Approved test scope"
 ```
 
-In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` indexes current and historical standard requirements, rapid-test work items, and legacy items awaiting mode classification; do not infer a legacy mode from its title. Create rapid work items with `--test-mode rapid`. Extend an existing requirement to a new environment or platform with `work-item-update --add-environment <env> --add-platform app --scope <incremental-scope>` instead of creating a second work item.
+In a new Codex, WorkBuddy, or other agent task, the user only needs to say `接手需求 REQ-XXX`. The agent runs `ai-test work-item-show --root . --requirement-id REQ-XXX` and restores the current stage, completed work, blockers, next steps, approved baseline, and reusable assets. `TEST_WORK_ITEMS.md` indexes current and historical standard requirements, rapid-test work items, and legacy items awaiting mode classification; do not infer a legacy mode from its title. Create rapid work items with `--test-mode rapid`; use `--test-mode one_pass` for the provisional design → execution → report run. An existing work item can change mode for future runs using `work-item-update --test-mode one_pass`; earlier run receipts retain their original meaning. Extend an existing requirement to a new environment or platform with `work-item-update --add-environment <env> --add-platform app --scope <incremental-scope>` instead of creating a second work item.
 
 Every generated requirement, rule, case, handoff, or report artifact is registered with `work-item-artifact-register`, including its stable artifact ID, path, SHA-256, review status, and workflow stage. `work-item-reconcile` detects missing or changed files, state that lags behind artifacts, unregistered legacy outputs, and attempts to enter `CASE_DESIGN` without an automation-readiness plan and validated rule-review receipt. See the [Chinese user guide](docs/ONE_REQUIREMENT_ONE_CONVERSATION.zh-CN.md).
 
@@ -232,6 +234,20 @@ For list, search, filter, pagination, and post-write readback features, case gen
 ## Permission test design
 
 Permission-controlled features automatically load the permission design reference in the existing skills. Separate upstream eligibility, role permissions, organization scope and access surfaces; verify browse/edit combinations, activation, revocation, navigation bypasses and server authorization. Run `ai-test permission-check --matrix rules/permission_matrix.json --cases cases/review-draft.json --output runs/latest/permission_design_receipt.json`. This validates declared design coverage only, not business correctness or executed results. See [permission design](.agents/skills/test-case-generate/references/permission-testing.md).
+
+## Private asset repository
+
+Real accounts, internal domains, business rules, private collaboration documents, screenshots and execution evidence never belong in this public repository. Keep them in a controlled private asset repository and connect it through a documented, read-only boundary. Create one with the scaffold instead of hand-copying files:
+
+```bash
+ai-test private-scaffold --root ./my-private-assets \
+  --name "Example Products" --system-id example-products \
+  --environment sit --platform web
+```
+
+The scaffold writes the project profile, a `knowledge/` registry, a reference `scripts/knowledge_registry.py`, a `.gitignore` that excludes credentials and run evidence, and integration notes. It never overwrites an existing file, and it records real SHA-256 hashes so the registry validates immediately.
+
+The private repository is the project root for `ai-test` commands (`--root <private-repo>`). Only three read-only commands cross the boundary: `knowledge-audit`, `baseline-snapshot` and `doctor --private-root`. Their contracts are `schemas/knowledge-registry-manifest.schema.json` and `schemas/knowledge-registry-load.schema.json`; a passing receipt proves local path and hash consistency only, never that an agent read the files, never a remote Current baseline, and never authorization for a business write. Only `reviewed` and `approved_test_method` entries may be returned as `required_reads`; `pending_review` candidates never become approved expectations. See [private repository integration](docs/PRIVATE_REPOSITORY_INTEGRATION.md).
 
 ## Project layout
 

@@ -4,5 +4,5 @@ requires-python = ">=3.9"
 
 [[package]]
 name = "ai-test-engineer"
-version = "0.13.0a3"
+version = "0.13.0a5"
 source = { editable = "." }

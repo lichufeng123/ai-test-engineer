@@ -139,9 +139,36 @@ class DocumentationGuardTest(unittest.TestCase):
             (root / "README.md").write_text("<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8")
             (root / "README.zh-CN.md").write_text("<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8")
             (root / "docs/FRAMEWORK.md").write_text("<!-- FRAMEWORK_VERSION: 0.0.9 -->", encoding="utf-8")
+            (root / "docs/IMPLEMENTATION_STATUS.zh-CN.md").write_text(
+                "<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8"
+            )
             result = check_documentation_sync(root)
             self.assertEqual(result["status"], "failed")
             self.assertIn("docs/FRAMEWORK.md", result["outdated_documents"])
+
+    def test_implementation_status_must_track_the_manifest_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            (root / "framework-manifest.json").write_text(
+                json.dumps({"framework_version": "0.1.0"}), encoding="utf-8"
+            )
+            for name in ("README.md", "README.zh-CN.md", "docs/FRAMEWORK.md"):
+                (root / name).write_text("<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8")
+            result = check_documentation_sync(root)
+            self.assertEqual(result["status"], "failed")
+            self.assertIn("docs/IMPLEMENTATION_STATUS.zh-CN.md", result["missing_documents"])
+
+            (root / "docs/IMPLEMENTATION_STATUS.zh-CN.md").write_text(
+                "<!-- FRAMEWORK_VERSION: 0.0.1 -->", encoding="utf-8"
+            )
+            stale = check_documentation_sync(root)
+            self.assertIn("docs/IMPLEMENTATION_STATUS.zh-CN.md", stale["outdated_documents"])
+
+            (root / "docs/IMPLEMENTATION_STATUS.zh-CN.md").write_text(
+                "<!-- FRAMEWORK_VERSION: 0.1.0 -->", encoding="utf-8"
+            )
+            self.assertEqual(check_documentation_sync(root)["status"], "passed")
 
     def test_chinese_readme_is_required(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "rule_set_id": "EXAMPLE-OMISSION-RISKS",
+  "title": "测试遗漏风险规则库（占位）",
+  "note": "占位内容。风险规则提示要测什么，不定义产品预期；命中项必须映射到独立用例或有依据的不适用/阻塞处置。",
+  "rules": [
+    {
+      "risk_id": "OR-EXAMPLE-001",
+      "title": "写入后搜索索引未同步",
+      "classification": "omission_risk",
+      "status": "approved_test_method",
+      "scope": "列表、搜索、筛选与写入后回读",
+      "trigger": "新增、编辑、导入、关联、改派或状态变更之后",
+      "omission_consequence": "详情回显正常但按新属性搜索缺失，导致误判为通过",
+      "test_requirements": [
+        "按受影响的新旧查询条件分别验证记录纳入与排除",
+        "校验稳定身份与关键属性一致，而不是只看列表非空",
+        "覆盖全分页完整性与重复记录"
+      ],
+      "source_refs": ["<替换为缺陷或复盘来源>"],
+      "last_verified_at": "1970-01-01"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-<!-- FRAMEWORK_VERSION: 0.13.0a3 -->
+<!-- FRAMEWORK_VERSION: 0.13.0a5 -->
 
 # AI 测试工程框架完整手册
 
@@ -39,17 +39,32 @@ AI提出业务问题时使用：当前理解、具体疑点、影响范围、建
 | 版本变更回归 | 资产版本不一致 | 校验变更影响并增量探索 |
 | 稳定回归 | 环境、平台、版本和资产均有效 | 直接执行回归，保留轻量资产校验 |
 | 快速测试 | 用户确认需要先测，正式需求/规则/用例产物尚未准备完成 | 仅暂缓正式需求说明、BF/A审核与正式用例生成；仍加载项目知识并执行思考协议和逐探针断言/Fixture/独立Oracle冻结，结论为临时 |
+| 一站式测试（`one_pass`） | 用户要求一次完成临时用例设计、执行和报告且不逐阶段等待审核 | 先展示来源绑定的 `OP-*` 用例，再连续执行已就绪场景并逐例报告；业务预期未确认的场景单项阻塞，结论仍为临时 |
 
 接手指定功能时，先查功能地图/别名、工作项索引与历史测试和缺陷；已有记录则快速复核本轮 SIT 入口、角色、数据和版本差异，从上次未验证之处继续，不把历史通过直接带进本轮。功能地图无记录时只做目标功能的增量探索。见 [系统与功能探索](system-and-feature-discovery.md)。
 
 系统全局探索不是每次必跑。目标功能探索也不是每次从零开始：已有L3/L4资产时，只验证入口、核心控件、数据前置和版本兼容。
 
-快速测试用于尚未完成正式产物的试点。它暂缓正式需求说明、BF/A审核与正式用例生成，仍加载适用知识、风险规则，冻结本轮关键断言/Fixture/独立Oracle并取证；结果标临时。用户已指定 SIT 功能测试时，范围内隔离 Fixture 的常规导入提交、刷新回读和 UI 导出无需逐次确认，也不因“发生写入”本身升级标准流程；真正用于发布/验收、重复正式回归、关键规则争议或缺陷时再跟进标准流程。生产、真实结算、真实通知和超范围不可逆操作单独判断。
+快速测试用于尚未完成正式产物的试点。它暂缓正式需求说明、BF/A审核与正式用例生成，仍加载适用知识、风险规则，冻结本轮关键断言/Fixture/独立Oracle并取证；结果标临时。一站式测试同样保留这些执行底线，并把设计、测试和报告合并为同一轮：在动作前冻结有角色、唯一Fixture、逐步操作/预期/独立Oracle/证据的 `OP-*` 临时用例，运行 `one-pass-check` 并展示可见用例，然后直接执行已就绪项、逐项回填结果再检查与报告。未审临时用例不得当作唯一正式基线；CLI 检查只验证本地身份/哈希/结果结构，不能证明产品通过。用户已指定 SIT 功能测试时，范围内隔离 Fixture 的常规导入提交、刷新回读和 UI 导出无需逐次确认，也不因“发生写入”本身升级标准流程；真正用于发布/验收、重复正式回归、关键规则争议或缺陷时再跟进标准流程。生产、真实结算、真实通知和超范围不可逆操作单独判断。
 
 
 SIT新任务先按功能地图与历史运行恢复功能，再从已审核账号/Fixture 台账选定唯一账号别名、角色、组织和登录方式；有匹配会话直接复用。缺账号或多候选时在打开登录页之前一次问清，登录后现场回读实际身份。SIT 测试范围已获授权时不要为正常登录逐次请求许可；只有缺运行时凭据、需要验证码/人工登录或用户持有浏览器控制权时才走 Ego Lite 的 handoff。只有工具返回交接成功才请用户在任务空间操作；`UI not available` 是工具交接失败，不能让用户在不可见窗口登录。完整分支见 [Web AI浏览器工具栈](web-ai-browser-stack.md)。
 
-每个新测试任务在首个页面/API/设备动作前都必须生成并保存测试计划包。标准模式使用批准的需求/用例范围、自动化准备度计划和执行前确认；快速模式使用临时测试章程与版本化探针。计划至少包含目标、范围/排除、知识和预期来源、环境/平台、角色、Fixture、覆盖/断言、独立Oracle、证据、风险、写入/清理/停止条件与完成标准。范围、基线或关键前置改变时重新冻结版本/哈希；缺少有效计划时不得开始正式执行。
+每个新测试任务在首个页面/API/设备动作前都必须生成并保存测试计划包。标准模式使用批准的需求/用例范围、自动化准备度计划和执行前确认；快速模式使用临时测试章程与版本化探针；一站式模式使用来源绑定的可见临时用例计划及单独的逐步结果文件。计划至少包含目标、范围/排除、知识和预期来源、环境/平台、角色、Fixture、覆盖/断言、独立Oracle、证据、风险、写入/清理/停止条件与完成标准。范围、基线或关键前置改变时重新冻结版本/哈希；缺少有效计划时不得开始正式执行。一站式运行示例：
+
+```bash
+ai-test work-item-create --root . --requirement-id REQ-XXX --title "功能测试" \
+  --feature "目标功能" --environment sit --platform web --scope "本轮隔离数据范围" \
+  --test-mode one_pass
+ai-test one-pass-check --input runs/RUN-XXX/one-pass-plan.json --root . \
+  --output runs/RUN-XXX/preflight.json
+# 向用户展示 case_preview，然后执行已就绪的OP-*临时用例并逐步记录当轮证据
+ai-test one-pass-check --input runs/RUN-XXX/one-pass-plan.json \
+  --results runs/RUN-XXX/one-pass-results.json --root . \
+  --output runs/RUN-XXX/closure.json
+```
+
+已存在的需求可用 `work-item-update --test-mode one_pass` 将后续运行切到此模式；此前快速运行仍保留其历史身份。`CASE_DESIGN` 的正式准备计划、规则审核及 Current 处置门禁不因模式变化而放宽。
 
 ## 4. 系统全局探索
 
@@ -268,7 +283,7 @@ ai-test video-check \
 
 报告前两章固定为“核心功能与业务流程录屏清单”和“产品确认暂不处理问题”。详见 [证据与报告](evidence-and-reporting.md)。
 
-### 11.1 自动化执行历史
+### 11.2 自动化执行历史
 
 每次自动化运行必须使用同一个稳定 `automation_id` 和唯一 `run_id` 留下时间与用途记录。通过执行门禁后、首个UI或接口测试动作前运行：
 
@@ -369,3 +384,27 @@ COMPLETE
 ## 17. 开源与内部资产边界
 
 公开仓库包含框架、Schema、模板、脱敏示例和通用适配器。真实账号、内部域名、私有协作文档、真实截图、业务数据和未脱敏历史执行资产应保存在私有仓库或受控文件空间。公开前执行敏感信息扫描和示例脱敏。
+
+### 17.1 私有资产仓库的创建与接入
+
+团队首次接入时用脚手架生成受控私有仓库，不要手工拼目录：
+
+```bash
+ai-test private-scaffold --root ./my-private-assets \
+  --name "Example Products" --system-id example-products \
+  --environment sit --platform web
+```
+
+脚手架写入项目画像、`knowledge/` 注册中心、参考 `scripts/knowledge_registry.py`、`.gitignore` 与接入说明；生成时写入真实 SHA-256，因此立即可通过 `validate`。既有文件一律不覆盖。
+
+私有仓库是 `ai-test` 命令的项目根（`--root <private-repo>`），工作项状态写入其 `.ai-test/`。跨边界读取只有三个只读命令：
+
+| 命令 | 作用 |
+|---|---|
+| `ai-test knowledge-audit --private-root <repo> --feature F --stage S` | 先 `validate` 再 `load`，并逐条复算返回路径与哈希 |
+| `ai-test baseline-snapshot --private-root <repo> --requirement-id REQ-X` | 复算工作项本地基线的身份与哈希 |
+| `ai-test doctor --root <repo> --private-root <repo>` | 离线安装健康检查加知识 manifest 哈希预检 |
+
+契约见 `schemas/knowledge-registry-manifest.schema.json` 与 `schemas/knowledge-registry-load.schema.json`，流程说明见 [私有资产仓库接入](PRIVATE_REPOSITORY_INTEGRATION.md)。
+
+知识注册中心只做路由与哈希绑定：它不证明 Agent 已读或理解文件，不代表远端 Current，也不授权任何业务写入。只有 `reviewed` 与 `approved_test_method` 条目可作为 `required_reads`；`pending_review` 候选永远不进入正式预期。私有仓库不得提交账号、密码、Cookie、Token、客户数据、截图、视频、下载文件或运行证据。

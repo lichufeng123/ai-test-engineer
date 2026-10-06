@@ -27,6 +27,7 @@ SKILL_NAMES = {
     "test-execution-asset-retrospective",
     "test-omission-risk-retrospective",
     "rapid-test",
+    "one-pass-test",
     "test-data-and-account-fixture-management",
     "test-recording-generate",
 }
@@ -128,6 +129,13 @@ class PortableSkillLayoutTest(unittest.TestCase):
         self.assertIn("assertions", probe)
         self.assertIn("fixture", probe)
         self.assertEqual(probe["status"], "draft")
+
+    def test_one_pass_skill_keeps_provisional_authority_and_visible_cases(self):
+        skill = (ROOT / ".agents/skills/one-pass-test/SKILL.md").read_text(encoding="utf-8")
+        for required in ("one_pass", "case_preview", "独立Oracle", "provisional", "执行", "报告", "不作验收/发布门禁"):
+            self.assertIn(required, skill)
+        workflow = (ROOT / ".agents/skills/ai-test-workflow/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("one-pass-test", workflow)
 
     def test_agent_guide_routes_project_knowledge_and_reasoning_before_skills(self):
         agent_guide = (ROOT / "AGENTS.md").read_text(encoding="utf-8")

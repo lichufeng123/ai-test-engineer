@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "run_id": "RUN-ONE-PASS-EXAMPLE",
+  "requirement_id": "REQ-SYNTH-ONE-PASS",
+  "mode": "one_pass",
+  "feature": "虚构目录批量导入",
+  "environment": "synthetic",
+  "platform": "web",
+  "scope": {"included": ["隔离虚构Fixture导入、刷新回读和导出"], "excluded": ["生产、真实通知和支付"]},
+  "result_authority": "provisional",
+  "knowledge_context": [
+    {"kind": "decision", "read_status": "read", "path": "knowledge/replace-with-confirmed-decision.md", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"kind": "omission_risk", "read_status": "unavailable", "reason": "虚构示例没有私有风险库；真实项目须按知识索引读取"}
+  ],
+  "cases": [
+    {
+      "case_id": "OP-001", "title": "正常文件导入并回读", "source_ref": "knowledge/replace-with-confirmed-decision.md#rule-1",
+      "expectation_status": "confirmed", "role": "测试编辑", "fixture": {"id": "QA-EXAMPLE-001", "unique_locator": "运行前确认唯一合成业务ID", "scope": "单个合成门店"},
+      "preconditions": ["当前环境/角色/版本确认、数据身份唯一、事前文件Oracle和写前快照已冻结"],
+      "steps": [
+        {"step_id": "S1", "action": "仅一次从UI提交哈希固定的合成文件", "expected": "有明确成功反馈且只修改目标记录", "oracle": {"source_ref": "已审规则与独立导入文件", "independent": true}, "evidence_plan": ["单次意图、操作视频、即时反馈和脱敏接口回执"]},
+        {"step_id": "S2", "action": "刷新后按合成业务ID逐字段回读", "expected": "值与提交前文件计算的预期一致", "oracle": {"source_ref": "提交前冻结的文件预期", "independent": true}, "evidence_plan": ["刷新截图和逐ID差异清单"]}
+      ],
+      "write_boundary": "只写单个隔离的非生产Fixture，状态不明不重试", "stop_conditions": ["零/多身份命中", "缺独立Oracle", "提交终态未知"]
+    },
+    {
+      "case_id": "OP-002", "title": "只读角色导入权限", "source_ref": "pending-permission-decision",
+      "expectation_status": "unknown", "readiness": "blocked", "blocker": "只读角色及独立权限口径尚未准备",
+      "role": "只读测试账号", "fixture": {"id": "QA-EXAMPLE-READONLY", "unique_locator": "待注册账号别名", "scope": "单个合成门店"},
+      "preconditions": ["账号、角色、组织范围及权限生效动作明确"],
+      "steps": [{"step_id": "S1", "action": "验证页面入口及服务端拒绝后数据不变", "expected": "按已审核权限矩阵判定", "oracle": {"source_ref": "待审核权限矩阵", "independent": true}, "evidence_plan": ["页面和有权账号写后只读回读"]}],
+      "write_boundary": "前置不全时不执行", "stop_conditions": ["口径或账号缺失"]
+    }
+  ]
+}

@@ -74,10 +74,10 @@ def initialize_work_item_index(root: Path) -> Dict[str, Any]:
         if manifest_path.is_file():
             try:
                 manifest_mode = _read_json(manifest_path).get("test_mode")
-                mode = manifest_mode if manifest_mode in {"standard", "rapid"} else "unclassified"
+                mode = manifest_mode if manifest_mode in {"standard", "rapid", "one_pass"} else "unclassified"
             except (OSError, json.JSONDecodeError):
                 mode = "unclassified"
-        elif mode not in {"standard", "rapid", "unclassified"}:
+        elif mode not in {"standard", "rapid", "one_pass", "unclassified"}:
             mode = "unclassified"
         if item.get("test_mode") != mode:
             item["test_mode"] = mode
@@ -93,9 +93,11 @@ def _render_overview(root: Path, index: Dict[str, Any]) -> None:
     buckets = {
         "当前标准需求": [],
         "当前快速测试": [],
+        "当前一站式测试": [],
         "当前模式待分类": [],
         "历史标准需求": [],
         "历史快速测试": [],
+        "历史一站式测试": [],
         "历史模式待分类": [],
     }
     active_statuses = {"planned", "active", "blocked"}
@@ -111,6 +113,8 @@ def _render_overview(root: Path, index: Dict[str, Any]) -> None:
         active = item.get("status") in active_statuses
         if test_mode == "rapid":
             bucket = "当前快速测试" if active else "历史快速测试"
+        elif test_mode == "one_pass":
+            bucket = "当前一站式测试" if active else "历史一站式测试"
         elif test_mode == "standard":
             bucket = "当前标准需求" if active else "历史标准需求"
         else:
@@ -122,6 +126,7 @@ def _render_overview(root: Path, index: Dict[str, Any]) -> None:
         "",
         "> 该文件由 `ai-test work-item-*` 自动生成，展示全部当前与历史工作项；不可手工维护。",
         "> 快速测试仍按独立需求/运行留痕，`test_mode=rapid` 只表示正式需求说明、规则和用例产物暂缓，不代表测试思考或执行门禁被跳过。",
+        "> 一站式测试 `test_mode=one_pass` 以临时用例一轮完成设计、执行和报告；未经过正式审核的结果始终为临时结论。",
         "",
     ]
     for heading, grouped_items in buckets.items():
@@ -152,7 +157,7 @@ def _render_overview(root: Path, index: Dict[str, Any]) -> None:
         "",
         "在新的 Codex、WorkBuddy 或其他 Agent 任务中只需说：`接手需求 REQ-XXX`。",
         "Agent 必须先运行 `ai-test work-item-show --root . --requirement-id REQ-XXX`，再按返回的文件顺序恢复上下文。",
-        "快速测试使用 `work-item-create --test-mode rapid`，并将章程、探针回执和结果注册到同一工作项；历史项保留在本索引中，不因归档而删除。",
+        "快速测试使用 `work-item-create --test-mode rapid`；一站式测试使用 `--test-mode one_pass`。均应保存版本化计划、执行收据和报告，不把临时用例冒充正式基线；历史项保留在本索引中。",
         "",
     ])
     (root / "TEST_WORK_ITEMS.md").write_text("\n".join(lines), encoding="utf-8")
@@ -205,8 +210,8 @@ def create_work_item(
     platforms = _unique(platforms)
     if not title.strip() or not feature.strip() or not scope.strip():
         raise ValueError("title、feature 和 scope 不能为空")
-    if test_mode not in {"standard", "rapid"}:
-        raise ValueError("test_mode 必须为 standard 或 rapid")
+    if test_mode not in {"standard", "rapid", "one_pass"}:
+        raise ValueError("test_mode 必须为 standard、rapid 或 one_pass")
     if not environments or not platforms:
         raise ValueError("至少需要一个环境和一个平台")
     item_root = root / ".ai-test/work-items" / requirement_id
@@ -369,8 +374,8 @@ def update_work_item(
             raise ValueError("scope 不能为空")
         manifest["scope"] = scope.strip()
     if test_mode is not None:
-        if test_mode not in {"standard", "rapid"}:
-            raise ValueError("test_mode 必须为 standard 或 rapid")
+        if test_mode not in {"standard", "rapid", "one_pass"}:
+            raise ValueError("test_mode 必须为 standard、rapid 或 one_pass")
         manifest["test_mode"] = test_mode
     if any(value is not None for value in (baseline_id, baseline_path, baseline_sha256)):
         baseline = manifest["official_baseline"]

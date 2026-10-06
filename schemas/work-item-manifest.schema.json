@@ -26,7 +26,7 @@
       "items": {"enum": ["web", "api", "app", "h5", "miniapp"]}
     },
     "scope": {"type": "string", "minLength": 1},
-    "test_mode": {"enum": ["standard", "rapid"]},
+    "test_mode": {"enum": ["standard", "rapid", "one_pass"]},
     "official_baseline": {
       "type": "object",
       "required": ["id", "path", "sha256"],

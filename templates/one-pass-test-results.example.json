@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "run_id": "RUN-ONE-PASS-EXAMPLE",
+  "plan_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "cases": [
+    {"case_id": "OP-001", "status": "blocked", "reason": "示例无实际执行环境，不能声称产品通过", "steps": [
+      {"step_id": "S1", "status": "not_executed", "actual": "未提交", "evidence_refs": []},
+      {"step_id": "S2", "status": "not_executed", "actual": "未回读", "evidence_refs": []}
+    ]},
+    {"case_id": "OP-002", "status": "blocked", "reason": "只读角色及口径未准备", "steps": [
+      {"step_id": "S1", "status": "not_executed", "actual": "未访问", "evidence_refs": []}
+    ]}
+  ]
+}

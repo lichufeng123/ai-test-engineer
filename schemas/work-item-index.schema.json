@@ -16,7 +16,7 @@
           "requirement_id": {"type": "string"},
           "title": {"type": "string"},
           "feature": {"type": "string"},
-          "test_mode": {"enum": ["standard", "rapid", "unclassified"]},
+          "test_mode": {"enum": ["standard", "rapid", "one_pass", "unclassified"]},
           "status": {"type": "string"},
           "stage": {"type": "string"},
           "environments": {"type": "array", "items": {"type": "string"}},

@@ -107,6 +107,16 @@ def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
     if set(case_ids) != set(requirements):
         raise ValueError("case_requirements_must_match_scope")
 
+    if plan.get('business_fixture_needs'):
+        from .fixtures.needs import validate
+        for need in plan['business_fixture_needs']:
+            validate(need)
+            if need['case_id'] not in case_ids:
+                raise ValueError('unknown_business_fixture_case')
+        targets=plan.get('business_fixture_target_refs',{})
+        if not isinstance(targets,dict) or any(not targets.get(env) for env in plan['automation_scope']['environments']):
+            raise ValueError('business_fixture_target_mapping_required')
+
     manual_only = set(plan["manual_only_case_ids"])
     unknown_manual = manual_only - set(case_ids)
     if unknown_manual:
@@ -174,6 +184,7 @@ def evaluate_execution_readiness(
     plan: Dict[str, Any],
     confirmation: Dict[str, Any],
     previous_missing: Optional[List[Dict[str, Any]]] = None,
+    fixture_registry=None,
 ) -> Dict[str, Any]:
     """Reconfirm scope/environment/accounts/data and split ready from blocked cases."""
 
@@ -307,6 +318,26 @@ def evaluate_execution_readiness(
             }
         missing_ledger.append(ledger_item)
 
+    resource_checks=[]
+    if plan.get('business_fixture_needs'):
+        from .fixtures.needs import readiness
+        needs=[n for n in plan['business_fixture_needs'] if n['case_id'] not in excluded]
+        target_ref=plan.get('business_fixture_target_refs',{}).get(target_environment)
+        if fixture_registry is None or not target_ref:
+            resource_checks=[{'case_id':n['case_id'],'fixture_status':'blocked','resources':[
+                {'fixture_key':n['fixture_key'],'status':'blocked','reason':'fixture_registry_or_target_unavailable'}]} for n in needs]
+        else:
+            resource_checks=readiness(fixture_registry,needs,target_ref)['cases']
+        already_blocked={x['case_id'] for x in blocked}
+        for check in resource_checks:
+            if check['fixture_status']=='blocked':
+                case_id=check['case_id']
+                if case_id in ready:ready.remove(case_id)
+                if case_id not in already_blocked:
+                    blocked.append({'case_id':case_id,'fixture_resource_checks':check['resources'],
+                                    'execution_action':'skip_without_retry','resume_condition':'fixture_observation_changed'})
+                    already_blocked.add(case_id)
+
     if ready and blocked:
         status = "passed_with_case_blocks"
     elif ready:
@@ -325,4 +356,5 @@ def evaluate_execution_readiness(
         "excluded_case_ids": sorted(excluded),
         "missing_prerequisites": missing_ledger,
         "error_codes": [],
+        **({'fixture_resource_checks':resource_checks} if plan.get('business_fixture_needs') else {}),
     }

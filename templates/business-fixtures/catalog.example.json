@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "target_ref": "demo-sit-shop",
+      "stage": "sit",
+      "zone": "z1",
+      "organization": "demo-brand",
+      "salon": "demo-shop",
+      "role": "advisor",
+      "platform": "api",
+      "build": "demo-contract-v1"
+    }
+  ],
+  "blueprints": [
+    {
+      "fixture_key": "member.smoke",
+      "version": "1",
+      "entity": "member",
+      "pool": "base",
+      "attributes": {
+        "name": "林悦（演示）",
+        "active": true
+      },
+      "requires": []
+    }
+  ]
+}

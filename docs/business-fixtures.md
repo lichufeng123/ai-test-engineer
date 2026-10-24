@@ -1,0 +1,55 @@
+# 本地业务测试数据
+
+本模块从 2026-10-25 开始实施。它提供本地登记、健康检查、读写租约、需求记录、离线准备与可信 Provider 编排。业务接口和真实映射放在私有项目。当前只是已验证的首批能力，完整历史脚本迁移、小程序配置创建和全量双环境回归尚未完成。
+
+## 三层数据
+
+- 蓝图固定 `fixture_key + version`，名称采用自然业务用语，如“舒缓肩颈护理”。有明确状态要求时直接表达“停用会员”。旧脚本不跟随 `latest`。
+- 目标固定阶段、区域、品牌、门店、角色、平台和接口版本；SIT、99 各自保存本地 ID。名称相同不能证明业务状态一致。
+- `base` 与 `scenario` 共享池只读；会改变状态的实例放 `run` 池。消费后标记 consumed，漂移标记 quarantined，不能通过再查一次自动洗成健康。
+
+蓝图是测试前置定义，不是产品正确性 Oracle。独立预期、权限和各端验证仍由原用例决定。
+
+## 入口
+
+`ai-test fixture --help` 列出命令。所有公共 CLI 命令仅操作本地登记或生成计划，不隐式登录或造业务数据。
+
+```sh
+ai-test fixture inventory --root /path/to/private-project --registry-root /path/to/main-worktree --output /tmp/inventory.json
+ai-test fixture register --root /path/to/private-project --input catalog.json
+ai-test fixture catalog --root /path/to/private-project
+ai-test fixture resolve --root /path/to/private-project --key member.smoke --version 1 --target demo-sit-shop
+ai-test fixture handbook --root /path/to/private-project --output /tmp/test-data.md
+```
+
+样例见 `templates/business-fixtures/catalog.example.json`，全部是虚构值。登记不代表实例已存在。`bind` 绑定后仍为 unknown，只有可信 Provider 按固定身份读取详情、核对属性后调用 `observe` 才可领取。
+
+`acquire` 的 JSON 输入包含 `run_id` 和 `requests`；每个请求包含 `fixture_key, version, target_ref, mode`。必须列出完整影响集，不能只锁最后一步的订单而遗漏会改变的会员。未知副作用阻塞写入。`heartbeat` 与 `release` 都验证租约所有者；释放必须有实际回读。
+
+数据库位于所属 Git 仓库的 common dir 下 `ai-test-fixtures/registry.sqlite3`，同机多个 worktree 使用同一库。非 Git 项目在 `.ai-test/fixtures/`。不要复制数据库到另一个路径后声称仍共用锁，也不要放在网络共享盘。协调范围为此机器、此库且接入协议的执行器；未迁移脚本和人工业务操作不会被自动拦截。
+
+租约过期不会自动解锁，防止旧进程继续写入；崩溃任务保持阻塞。当前没有自动强制解锁/恢复或删除命令。核清执行器已停止及业务状态后再实施受控恢复；不能删库绕过占用。读锁共享，写锁与读写均互斥。框架不能替代服务端事务和鉴权。
+
+## SIT 记录，99 准备
+
+`record-need` 输入 `run_id` 和 `need`；need 固定 `requirement_id, case_id, fixture_key, version, usage`。重复记录幂等，同 Case 同 key 的版本/用途冲突会阻塞。`freeze-needs` 结束记录并输出哈希。修改需求使用新 run/revision，不能改已冻结清单。
+
+用户说“SIT 测完”或“测 99”时，当前任务内先冻结 SIT needs，再使用 99 的 target_ref 调用 `prepare`。prepare 输入为 `needs,target_ref,capabilities`，依赖按拓扑排序；缺 Provider 能力标 blocked。公共 prepare 是离线能力计划，真正“已有则复用、没有则创建”由可信 Provider 的 `find/detail/create` 完成，不能把 planned 写为 ready 实例。
+
+Provider 代码直接使用 `executor.prepare/apply/reconcile`，不从 JSON 加载可执行命令。apply 冻结目标、蓝图、依赖和 Provider recipe 合同；写前持久化意图。创建超时不重发，`reconcile` 只读确认唯一实例后才能续跑。仍在 executing 的旧进程不允许被对账抢占；查不到实例也不视为允许重发。工厂准备保守按区域和品牌串行，避免同品牌多门店重复创建。
+
+`align` 显式比较相同 key/version 两目标的字段。只比较声明字段，不自动映射权限、分类、时间周期或独立 Oracle。已有同名对象的价格/时长不一致时保留差异，不擅自改价。
+
+## 执行准备度与证据
+
+原 `readiness-plan` 可增加 `business_fixture_needs` 和 `business_fixture_target_refs`（环境名到目标引用）。`readiness-check --root` 从本地登记核对健康与版本，输出 `fixture_resource_checks`，仅阻塞依赖的 Case。旧计划不补认新版，不改变原账号、设备、Oracle 与业务断言。
+
+健康检查有 TTL；每次执行前应重新通过 Provider 回读。领取后、动作前检查租约；执行器应定期心跳。一个 `readiness` passed 不是完整功能通过，运行仍须 execution-log、原用例断言、实际证据和 cleanup。
+
+## 当前交付边界
+
+已实现：历史源码/台账交叉扫描、不可变版本登记、目标隔离、三类池、健康/租约、本地跨进程事务、needs、离线依赖计划、未知写对账、语义字段对齐、手册生成和准备度集成。
+
+私有首批接入：既有查询工具、历史服务目录 check/ensure。现场已验证双环境服务只读准备；创建与中断对账有假 Provider 契约测试，不代表真实创建验收。
+
+尚未完成：全部历史 Case 的语义映射、账号/会员改名、所有实体创建合同、预约/目标组合的真实创建、小程序题库与独立金标接入、历史 UI/设备用例的完整双环境回归。历史扫描的 `defer` 必须继续逐项处理，不能用扫描总数作为迁移完成数。

@@ -38,3 +38,7 @@
 快速模式仍执行上述 1、3、4、5、6、7 项的适用部分，特别是第 3 项系统知识和第 5 项遗漏风险规则；不能因为没有正式用例/Current 基线或时间盒较短而省略。私有业务仓库先运行知识注册中心 `validate`、按 feature/stage `load`，并实际读取全部 `required_reads`，包括 `knowledge/test-risks/omission-risk-rules.json`。候选风险可以辅助提示，不得作为已审核 Oracle。
 
 每个新测试任务在首个页面/API/设备动作前都必须有已保存的测试计划。标准模式以已审核的任务范围、可用时的正式用例基线、automation-readiness plan 和 pre-execution confirmation 组成计划包；若标准需求探索开始时尚无正式基线，先保存标明基线缺失的只读探索计划，范围/用例审核后再更新并冻结哈希。快速模式以 rapid-test charter 加版本化探针组成临时计划包。快速模式只暂缓耗时的正式需求说明书、正式 BF/A 规则审核与正式用例生成；它不生成正式测试用例或新基线。临时测试章程引用当前知识、正式预期来源（缺失时明确标注）、风险规则、Fixture、断言、独立 Oracle、证据和安全边界。任务没有足够资料时，先执行独立安全的只读探索并标记未知，不能猜定 Oracle。
+
+## 业务测试数据入口
+
+跨功能Fixture准备加载[本地业务测试数据](business-fixtures.md)，再读私有项目 `shared/fixtures/factory-catalog.json`、迁移清单、账号约定及手册。新readiness计划可声明business_fixture_needs及环境目标映射；旧Case预期保持原来源。未迁移资产与未验证工厂明确列出，不因目录存在就认定就绪。

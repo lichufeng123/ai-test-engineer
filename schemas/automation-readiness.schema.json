@@ -14,6 +14,56 @@
     "evidence_plan"
   ],
   "properties": {
+  "business_fixture_needs": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "case_id",
+        "fixture_key",
+        "version",
+        "usage"
+      ],
+      "properties": {
+        "requirement_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "case_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "fixture_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "usage": {
+          "enum": [
+            "read",
+            "write"
+          ]
+        }
+      }
+    }
+  },
+  "business_fixture_target_refs": {
+    "type": "object",
+    "additionalProperties": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    }
+  },
     "schema_version": {"const": 1},
     "plan_id": {"type": "string", "minLength": 1},
     "requirement_baseline_id": {"type": "string", "minLength": 1},

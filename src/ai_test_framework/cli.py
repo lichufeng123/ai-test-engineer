@@ -55,6 +55,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ai-test", description="可移植的 AI 测试工程框架")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    from .fixtures.cli import add_parser as add_fixture_parser
+    add_fixture_parser(commands)
+
     usage = commands.add_parser("nowledge-usage", help="离线分析Nowledge估算体量与整轮官方用量；不含正文")
     usage.add_argument("--session", required=True, help="本地Codex JSONL文件或latest")
     usage.add_argument("--latest-turn", action="store_true")
@@ -319,6 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_check.add_argument("--confirmation", required=True)
     readiness_check.add_argument("--previous-missing")
     readiness_check.add_argument("--output", required=True)
+    readiness_check.add_argument("--root", default=".", help="业务Fixture单机登记库所属Git项目")
 
     execution_start = commands.add_parser(
         "execution-log-start", help="自动化开始前登记执行时间、作用、目的和范围"
@@ -356,6 +360,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "fixture":
+        from .fixtures.cli import run as run_fixture
+        return _emit(run_fixture(args))
     if args.command == "nowledge-usage":
         try:
             session = Path(args.session).expanduser()
@@ -559,10 +566,16 @@ def main(argv=None) -> int:
         output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return _emit(value)
     if args.command == "readiness-check":
+        readiness_source = _read(args.plan)
+        fixture_registry = None
+        if readiness_source.get('business_fixture_needs'):
+            from .fixtures.registry import Registry, database_path
+            fixture_registry = Registry(database_path(args.root))
         value = evaluate_execution_readiness(
-            _read(args.plan),
+            readiness_source,
             _read(args.confirmation),
             previous_missing=_read(args.previous_missing) if args.previous_missing else None,
+            fixture_registry=fixture_registry,
         )
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)

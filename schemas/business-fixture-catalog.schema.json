@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Versioned business fixture catalog",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_ref",
+          "stage",
+          "zone",
+          "organization",
+          "salon",
+          "role",
+          "platform",
+          "build"
+        ],
+        "properties": {
+          "target_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "zone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "organization": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "salon": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "build": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      }
+    },
+    "blueprints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fixture_key",
+          "version",
+          "entity",
+          "pool",
+          "attributes",
+          "requires"
+        ],
+        "properties": {
+          "fixture_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "not": {
+              "enum": [
+                "latest",
+                "*"
+              ]
+            }
+          },
+          "entity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "pool": {
+            "enum": [
+              "base",
+              "scenario",
+              "run"
+            ]
+          },
+          "attributes": {
+            "type": "object"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "fixture_key",
+                "version"
+              ],
+              "properties": {
+                "fixture_key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "targets",
+    "blueprints"
+  ]
+}

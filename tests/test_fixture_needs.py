@@ -1,3 +1,4 @@
+import time
 import json
 import tempfile
 import unittest
@@ -24,7 +25,7 @@ class NeedsTests(unittest.TestCase):
 
     def test_missing_fixture_blocks_only_dependent_case(self):
         self.r.bind('member.smoke','1','sit-shop','m1')
-        self.r.observe('member.smoke','1','sit-shop',dict(local_id='m1',target=TARGET,attributes={'active':True},evidence_ref='run/read'))
+        self.r.observe('member.smoke','1','sit-shop',dict(local_id='m1',target=TARGET,attributes={'active':True},observed_at=time.time(),evidence_ref='run/read'))
         result=readiness(self.r,[self.need,{**self.need,'case_id':'CASE-2','fixture_key':'missing'}],'sit-shop')
         self.assertEqual([x['fixture_status'] for x in result['cases']],['ready','blocked'])
         self.assertEqual(result['authority'],'fixture_preconditions_only')
@@ -34,8 +35,29 @@ class NeedsTests(unittest.TestCase):
         self.r.add_target(other)
         for t,price in [(TARGET,100),(other,200)]:
             self.r.bind('member.smoke','1',t['target_ref'],'m1')
-            self.r.observe('member.smoke','1',t['target_ref'],dict(local_id='m1',target=t,attributes={'active':True,'price':price},evidence_ref='r'))
+            self.r.observe('member.smoke','1',t['target_ref'],dict(local_id='m1',target=t,attributes={'active':True,'price':price},observed_at=time.time(),evidence_ref='r'))
         self.assertEqual(align(self.r,'member.smoke','1',['sit-shop','99-shop'],['active'])['status'],'aligned')
         self.assertEqual(align(self.r,'member.smoke','1',['sit-shop','99-shop'],['price'])['status'],'drift')
+
+    def test_active_writer_blocks_readiness_only_for_affected_cases(self):
+        bp={**BLUEPRINT,'pool':'run'}
+        self.r.add_blueprints([{**bp,'fixture_key':'writer'}])
+        self.r.bind('writer','1','sit-shop','m1')
+        self.r.observe('writer','1','sit-shop',dict(local_id='m1',target=TARGET,attributes={'active':True},observed_at=time.time(),evidence_ref='read'))
+        self.r.acquire([dict(fixture_key='writer',version='1',target_ref='sit-shop',mode='write')],'other')
+        result=readiness(self.r,[{**self.need,'fixture_key':'writer'}],'sit-shop')
+        self.assertEqual(result['status'],'blocked')
+        self.assertEqual(result['cases'][0]['resources'][0]['reason'],'LEASE_CONFLICT')
+
+    def test_prepare_target_freezes_recorded_needs_and_keeps_missing_capability_explicit(self):
+        from ai_test_framework.fixtures.needs import prepare_target
+        record(self.r,'RUN-SIT',self.need)
+        other={**TARGET,'target_ref':'99-shop','stage':'prd','zone':'z99'};self.r.add_target(other)
+        result=prepare_target(self.r,'RUN-SIT','99-shop',[])
+        self.assertEqual(result['source_needs']['status'],'frozen')
+        self.assertEqual(result['plan']['status'],'blocked')
+        self.assertEqual(result['plan']['target'],other)
+        self.assertEqual(result['business_writes'],0)
+        with self.assertRaises(FixtureError):record(self.r,'RUN-SIT',{**self.need,'case_id':'CASE-2'})
 
 if __name__=='__main__':unittest.main()

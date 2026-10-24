@@ -34,7 +34,7 @@ ai-test fixture handbook --root /path/to/private-project --output /tmp/test-data
 
 `record-need` 输入 `run_id` 和 `need`；need 固定 `requirement_id, case_id, fixture_key, version, usage`。重复记录幂等，同 Case 同 key 的版本/用途冲突会阻塞。`freeze-needs` 结束记录并输出哈希。修改需求使用新 run/revision，不能改已冻结清单。
 
-用户说“SIT 测完”或“测 99”时，当前任务内先冻结 SIT needs，再使用 99 的 target_ref 调用 `prepare`。prepare 输入为 `needs,target_ref,capabilities`，依赖按拓扑排序；缺 Provider 能力标 blocked。公共 prepare 是离线能力计划，真正“已有则复用、没有则创建”由可信 Provider 的 `find/detail/create` 完成，不能把 planned 写为 ready 实例。
+用户说“SIT 测完”或“测 99”时，当前任务使用 `prepare-target`（输入 `source_run_id,target_ref,capabilities`）冻结 SIT needs、生成 99 依赖计划和逐 Case 当前准备度；也可分步调用 freeze-needs 与 prepare。prepare 输入为 `needs,target_ref,capabilities`，依赖按拓扑排序；缺 Provider 能力标 blocked。公共 prepare 是离线能力计划，真正“已有则复用、没有则创建”由可信 Provider 的 `find/detail/create` 完成，不能把 planned 写为 ready 实例。
 
 Provider 代码直接使用 `executor.prepare/apply/reconcile`，不从 JSON 加载可执行命令。apply 冻结目标、蓝图、依赖和 Provider recipe 合同；写前持久化意图。创建超时不重发，`reconcile` 只读确认唯一实例后才能续跑。仍在 executing 的旧进程不允许被对账抢占；查不到实例也不视为允许重发。工厂准备保守按区域和品牌串行，避免同品牌多门店重复创建。
 
@@ -42,7 +42,7 @@ Provider 代码直接使用 `executor.prepare/apply/reconcile`，不从 JSON 加
 
 ## 执行准备度与证据
 
-原 `readiness-plan` 可增加 `business_fixture_needs` 和 `business_fixture_target_refs`（环境名到目标引用）。`readiness-check --root` 从本地登记核对健康与版本，输出 `fixture_resource_checks`，仅阻塞依赖的 Case。旧计划不补认新版，不改变原账号、设备、Oracle 与业务断言。
+原 `readiness-plan` 可增加 `business_fixture_needs` 和 `business_fixture_target_refs`（环境名到目标引用）。`readiness-check --root` 从本地登记核对健康与版本，输出 `fixture_resource_checks`，检查当前冲突/过期租约，仅阻塞依赖的 Case；准备度不预占资源，动作前仍须原子领取。旧计划不补认新版，不改变原账号、设备、Oracle 与业务断言。
 
 健康检查有 TTL；每次执行前应重新通过 Provider 回读。领取后、动作前检查租约；执行器应定期心跳。一个 `readiness` passed 不是完整功能通过，运行仍须 execution-log、原用例断言、实际证据和 cleanup。
 
@@ -53,3 +53,12 @@ Provider 代码直接使用 `executor.prepare/apply/reconcile`，不从 JSON 加
 私有首批接入：既有查询工具、历史服务目录 check/ensure。现场已验证双环境服务只读准备；创建与中断对账有假 Provider 契约测试，不代表真实创建验收。
 
 尚未完成：全部历史 Case 的语义映射、账号/会员改名、所有实体创建合同、预约/目标组合的真实创建、小程序题库与独立金标接入、历史 UI/设备用例的完整双环境回归。历史扫描的 `defer` 必须继续逐项处理，不能用扫描总数作为迁移完成数。
+
+
+## 2026-10-25 复核修正
+
+观察回执必须携带 Provider 实际完成读取的 `observed_at`、固定目标、详情证据引用和属性。登记时仅接受最近 60 秒的读取，TTL 从读取时刻起算；原样重放和倒序回执拒绝续期。公共 `observe` 接收的是可信适配器回执，不验证第三方伪造时间戳，不能把任意手填 JSON 当成现场证明。
+
+动作前 `assert_lease` 和心跳同时复核全部资源的健康有效期与领取时属性指纹；业务写入前执行器仍须通过 Provider 做新鲜回读。释放要求晚于领取证据的读取。品牌共享服务在不同门店仍是同一物理对象；当前所有实体统一保守按阶段、区、品牌、实体、ID 加锁，可能让门店局部同 ID 发生额外等待。此行为优先避免并发漏锁，后续须凭已验证的实体作用域合同才能缩小范围。
+
+数据库 v1→v2 仅在无活动租约时迁移锁键，同时使旧健康证据过期，不自动释放未知租约。工厂互斥范围仍为品牌，步骤意图另含门店，避免混淆同品牌多店实例。已绑定对象查询消失时，创建前就阻塞；不得先新建再发现不可变绑定冲突。实例 ID 以 SQLite 为权威，私有静态表只用于首次导入。

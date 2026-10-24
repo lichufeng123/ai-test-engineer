@@ -5,6 +5,7 @@ Expired leases never become available automatically: unknown effects require rev
 """
 import hashlib
 import json
+import math
 import os
 import re
 import sqlite3
@@ -67,8 +68,16 @@ class Registry:
             for statement in schema.split(';'):
                 if statement.strip():db.execute(statement)
             rows=db.execute('select version from meta').fetchall()
-            if not rows: db.execute('insert into meta values(1)')
-            else: require(len(rows)==1 and rows[0][0]==1,'DATABASE_VERSION_UNSUPPORTED')
+            if not rows: db.execute('insert into meta values(2)')
+            else:
+                require(len(rows)==1 and rows[0][0] in (1,2),'DATABASE_VERSION_UNSUPPORTED')
+                if rows[0][0]==1:
+                    require(not db.execute("select 1 from leases where state='active'").fetchone(),'SCHEMA_MIGRATION_ACTIVE_LEASES')
+                    for row in db.execute('select key,version,target,physical from bindings').fetchall():
+                        parts=json.loads(row['physical']);require(len(parts)==6,'PHYSICAL_KEY_INVALID')
+                        db.execute('update bindings set physical=?,expires=0 where key=? and version=? and target=?',
+                                   (canonical(parts[:3]+parts[4:]),row['key'],row['version'],row['target']))
+                    db.execute('update meta set version=2')
         os.chmod(self.path,0o600)
     @contextmanager
     def tx(self):
@@ -121,7 +130,7 @@ class Registry:
         local_id=identifier(str(local_id));safe(local_id)
         with self.tx() as db:
             t=self._target(db,target);b=self._blueprint(db,key,version)
-            physical=canonical([t[k] for k in ('stage','zone','organization','salon')]+[b['entity'],local_id])
+            physical=canonical([t[k] for k in ('stage','zone','organization')]+[b['entity'],local_id])
             old=db.execute('select * from bindings where key=? and version=? and target=?',(key,version,target)).fetchone()
             require(not old or old['local_id']==local_id,'BINDING_IMMUTABLE_NEW_VERSION_REQUIRED')
             db.execute('insert or ignore into bindings values(?,?,?,?,?,?,?,?)',(key,version,target,local_id,physical,'unknown',None,0))
@@ -130,8 +139,10 @@ class Registry:
         r=db.execute('select * from bindings where key=? and version=? and target=?',(key,version,target)).fetchone()
         require(r is not None,'BINDING_MISSING');return dict(r)
     def _matches(self,db,b,observation,expected_state=True):
-        require(isinstance(observation,dict) and set(observation)=={'local_id','target','attributes','evidence_ref'},'OBSERVATION_FIELDS_INVALID')
+        require(isinstance(observation,dict) and set(observation)=={'local_id','target','attributes','evidence_ref','observed_at'},'OBSERVATION_FIELDS_INVALID')
         safe(observation);identifier(observation['evidence_ref'])
+        at=observation['observed_at']
+        require(type(at) in (int,float) and math.isfinite(at) and time.time()-60<=at<=time.time()+5,'OBSERVATION_STALE_OR_INVALID')
         require(str(observation['local_id'])==b['local_id'] and observation['target']==self._target(db,b['target']),'OBSERVATION_IDENTITY_MISMATCH')
         attrs=observation['attributes'];expected=self._blueprint(db,b['key'],b['version'])['attributes']
         require(isinstance(attrs,dict),'OBSERVATION_ATTRIBUTES_INVALID')
@@ -140,13 +151,17 @@ class Registry:
         require(type(ttl) is int and 0<ttl<=86400,'TTL_INVALID');error=None
         with self.tx() as db:
             b=self._binding(db,key,version,target)
+            # Replaying a receipt must neither renew health nor poison fresh evidence.
+            old=json.loads(b['observed']) if b['observed'] else {}
+            require(isinstance(observation,dict) and type(observation.get('observed_at')) in (int,float),'OBSERVATION_TIME_REQUIRED')
+            require(observation['observed_at']>old.get('observed_at',0),'OBSERVATION_NOT_NEW')
             try:self._matches(db,b,observation)
             except FixtureError as e:error=e
             if error:
                 db.execute("update bindings set state='quarantined',expires=0 where physical=?",(b['physical'],))
             else:
                 require(b['state'] not in {'consumed','quarantined'},'RECONCILIATION_REQUIRED')
-                db.execute("update bindings set state='healthy',observed=?,expires=? where key=? and version=? and target=?",(canonical(observation),time.time()+ttl,key,version,target))
+                db.execute("update bindings set state='healthy',observed=?,expires=? where key=? and version=? and target=?",(canonical(observation),observation['observed_at']+ttl,key,version,target))
             self.audit(db,'observe',dict(fixture_key=key,target_ref=target,accepted=not bool(error)))
         if error:raise error
         return self.resolve(key,version,target)
@@ -188,12 +203,19 @@ class Registry:
         row=db.execute('select * from leases where id=?',(lid,)).fetchone()
         require(row is not None and row['run']==owner and row['state']=='active','LEASE_OWNER_OR_STATE_MISMATCH')
         require(row['expires']>time.time(),'LEASE_EXPIRED');return row
+    def _lease_resources(self,db,lid):
+        for lock in db.execute('select * from locks where lease=?',(lid,)):
+            frozen=json.loads(lock['snapshot'])
+            current=self._resolve(db,frozen['key'],frozen['version'],frozen['target'])
+            require(current['physical']==frozen['physical'] and current['local_id']==frozen['local_id']
+                    and current['observation']['attributes']==frozen['observation']['attributes'],'LEASE_RESOURCE_DRIFT')
     def assert_lease(self,lid,owner):
-        with self.tx() as db:self._lease(db,lid,owner)
+        with self.tx() as db:
+            self._lease(db,lid,owner);self._lease_resources(db,lid)
     def heartbeat(self,lid,owner,ttl=300):
         require(type(ttl) is int and 0<ttl<=3600,'TTL_INVALID')
         with self.tx() as db:
-            self._lease(db,lid,owner);db.execute('update leases set expires=? where id=?',(time.time()+ttl,lid))
+            self._lease(db,lid,owner);self._lease_resources(db,lid);db.execute('update leases set expires=? where id=?',(time.time()+ttl,lid))
     def release(self,lid,owner,observations):
         with self.tx() as db:
             self._lease(db,lid,owner);locks=list(db.execute('select * from locks where lease=?',(lid,)))
@@ -201,9 +223,11 @@ class Registry:
             for lock in locks:
                 b=json.loads(lock['snapshot']);obs=observations.get(lock['physical'],observations.get(b['local_id']))
                 require(obs is not None,'RELEASE_READBACK_REQUIRED');self._matches(db,b,obs,expected_state=False)
+                require(obs['observed_at']>b['observation']['observed_at'],'RELEASE_FRESH_READBACK_REQUIRED')
                 # Base readers must see unchanged state. A writer's instance is consumed until separately reconciled.
                 unchanged=obs['attributes']==b['observation']['attributes']
-                outcomes.append((lock['physical'],'consumed' if lock['mode']=='write' else 'healthy' if unchanged else 'quarantined'))
+                poison=db.execute("select 1 from bindings where physical=? and state in ('quarantined','consumed')",(lock['physical'],)).fetchone()
+                outcomes.append((lock['physical'],'quarantined' if poison or not unchanged and lock['mode']=='read' else 'consumed' if lock['mode']=='write' else 'healthy'))
             for physical,state in outcomes:
                 if state!='healthy':db.execute('update bindings set state=?,expires=0 where physical=?',(state,physical))
             db.execute("update leases set state='released' where id=?",(lid,));self.audit(db,'lease_release',dict(lease_id=lid,outcomes=outcomes))

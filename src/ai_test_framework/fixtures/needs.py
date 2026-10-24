@@ -1,5 +1,6 @@
 """Incremental run requirements and per-case fixture readiness, without business writes."""
 import json
+import time
 from .registry import FixtureError, canonical, digest, identifier, require, safe
 
 
@@ -41,8 +42,12 @@ def readiness(registry,needs,target_ref):
         validate(need);slot=(need['requirement_id'],need['case_id'])
         case=groups.setdefault(slot,{'requirement_id':slot[0],'case_id':slot[1],'fixture_status':'ready','resources':[]})
         try:
-            binding=registry.resolve(need['fixture_key'],need['version'],target_ref)
-            with registry.tx() as db:bp=registry._blueprint(db,need['fixture_key'],need['version'])
+            with registry.tx() as db:
+                binding=registry._resolve(db,need['fixture_key'],need['version'],target_ref)
+                bp=registry._blueprint(db,need['fixture_key'],need['version'])
+                for lock in db.execute("select locks.mode,leases.expires from locks join leases on leases.id=locks.lease where locks.physical=? and leases.state='active'",(binding['physical'],)):
+                    require(lock['expires']>time.time(),'EXPIRED_LEASE_RECONCILIATION_REQUIRED')
+                    require(need['usage']=='read' and lock['mode']=='read','LEASE_CONFLICT')
             require(need['usage']!='write' or bp['pool']=='run','SHARED_POOL_WRITE_FORBIDDEN')
             item={'fixture_key':need['fixture_key'],'status':'ready','local_id':binding['local_id']}
         except FixtureError as e:
@@ -61,3 +66,13 @@ def align(registry,key,version,targets,fields):
         values.append({'target_ref':target,'attributes':{f:attrs[f] for f in fields}})
     differences=[f for f in fields if any(v['attributes'][f]!=values[0]['attributes'][f] for v in values[1:])]
     return {'status':'drift' if differences else 'aligned','fixture_key':key,'version':version,'compared_fields':fields,'differences':differences,'targets':values}
+
+
+def prepare_target(registry,source_run_id,target_ref,capabilities):
+    """Explicit conversation-triggered handoff. Offline, no implicit business writes."""
+    from .executor import prepare
+    registry.target(target_ref)  # Reject unmapped targets before freezing the source.
+    frozen=freeze(registry,source_run_id)
+    plan=prepare(registry,frozen['needs'],target_ref,capabilities)
+    return {'status':plan['status'],'source_needs':frozen,'plan':plan,
+            'current_readiness':readiness(registry,frozen['needs'],target_ref),'business_writes':0}

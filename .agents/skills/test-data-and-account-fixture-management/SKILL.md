@@ -21,12 +21,12 @@ metadata:
 
 ## 先分类用途，再命名和创建
 
-每个Fixture创建前，为其记录唯一`fixture_id`、用途、实体类型、目标环境/组织/门店、状态、拥有需求/用例、创建方式、依赖、回读断言和清理策略。推荐按用途隔离命名空间，例如：
+每个Fixture创建前，为其记录唯一`fixture_id`、用途、实体类型、目标环境/组织/门店、状态、拥有需求/用例、创建方式、依赖、回读断言和清理策略。显示名使用自然、可读的业务名称；场景性很强时直接表达状态。机器键与显示名分开，旧前缀作为历史别名保留，不为美化名称直接改正在被用例引用的数据。例如：
 
-- `QA-COMMISSION-BASE-*`：批量导入的稳定基础服务、职位、规则基线。
-- `QA-COMMISSION-EXPORT-EXCLUDED-*`：禁用、草稿、无规则等仅用于导出范围断言的对象。
-- `QA-COMMISSION-ORDER-BEFORE-*` / `QA-COMMISSION-ORDER-AFTER-*`：用于验证历史订单不变和新订单规则生效。
-- `QA-COMMISSION-PERM-EDITOR-*` / `...-READONLY-*` / `...-DENIED-*`：隔离权限账号与对象。
+- `commission.base.*`（显示名如“舒缓肩颈护理”）：批量导入的稳定基础服务、职位、规则基线。
+- `commission.export.excluded.*`（显示名如“停用服务·导出排除”）：禁用、草稿、无规则等仅用于导出范围断言的对象。
+- `commission.order.before.*` / `commission.order.after.*`：用于验证历史订单不变和新订单规则生效。
+- `commission.role.editor` / `commission.role.readonly` / `commission.role.denied`：隔离权限账号与对象。
 
 名称应表达用途和状态；不同用途不能只靠备注区分，也不得让排除范围的对象进入正式导入基线。数据需求变化时优先建立新的隔离Fixture，不把旧Fixture静默改造成另一用途。
 
@@ -38,9 +38,28 @@ metadata:
 - 角色授权变化后退出并重登验证；分别检查菜单、页面、直达地址/导航和拒绝后数据未变。管理员成功不能证明受限角色权限正确。
 - 员工密码由专用运行时变量注入；员工手机号按每个Fixture的环境变量引用提供。变更后做最小范围回读，避免在日志/错误截图中留下输入内容。
 
+## 本地数据工厂入口与跨环境交接
+
+已安装业务 Fixture 模块的项目，先读 `docs/business-fixtures.md` 的协议，再由项目知识索引定位私有 `shared/fixtures/` 中的能力目录、版本化蓝图/首次绑定、迁移清单与账号数据手册。不存在时明确缺口；不把示例值或其它项目的目录当成当前数据。
+
+| 环节 | 现有入口与必需输入 |
+| --- | --- |
+| 发现 | `ai-test fixture catalog --root <private-root>`，并读项目登记的 Provider 能力表；只读临时会员通过该项目既有查询入口获取，再冻结唯一身份 |
+| 运行中记录 | `ai-test fixture record-need --root <private-root> --input <need.json>`；输入 `run_id` 及 `need`，need 含 `requirement_id, case_id, fixture_key, version, usage` |
+| SIT 结束 | `ai-test fixture freeze-needs --root <private-root> --input <run.json> --output <frozen.json>`；输入 `run_id`；不再改变已冻结清单 |
+| 切到 99 | `ai-test fixture prepare-target --root <private-root> --input <handoff.json> --output <prepared.json>`；输入 `source_run_id,target_ref,capabilities`，capabilities 来自已核实 Provider；冻结源 needs、解析目标并输出依赖计划与逐 Case 当前准备度 |
+| 领取/续租/释放 | `ai-test fixture acquire/heartbeat/release --root <private-root> --input <lease-operation.json>`；完整影响集、run_id 和租约所有者遵循协议；动作前用 `Registry.assert_lease` 复核健康与指纹 |
+| 人用手册 | `ai-test fixture handbook --root <private-root> --output <handbook.md>`；私有项目可使用已登记的增强导出器，按同一登记源和本次回执更新 Notion 阅读副本并回读 |
+
+用户在当前任务说“SIT 测完”或“测 99”时执行交接，不另开后台任务。prepare-target 是离线计划，不隐式创建；缺项由项目已登记的工厂按现有授权和冻结计划执行，随后健康回读、语义对齐和准备度检查。SIT/99 自主登录授权沿用，不重复询问已有密码；写入仍绑定具体目标和作用范围。
+
+旧用例迁移逐消费者保存 old→key/version→target/local_id 映射，保留原 Case、独立 Oracle、定位依赖与副作用。运行时 ID 以本地登记库为准，静态绑定仅用于首次导入。未迁移或未实跑的脚本标明未完成；基础包检查不代表原功能通过。
+
+同机 worktree 使用 Git common-dir 内唯一 SQLite；先查健康再原子申请完整影响集，基础/共享场景池只读，可变实例进入 run 池。冲突只阻塞依赖 Case，不能另建数据库、换别名或直接使用旧硬编码 ID 绕开占用。过期租约保持阻塞直至核清未知效果，不自动回收。手册和 Notion 是阅读副本，均不作为锁源。
+
 ## 创建、回读与生命周期
 
-1. 阅读已审核需求、业务规则、系统地图、角色模型、现有Fixture契约和历史运行状态；列出reuse/extend/reject/supersede候选。先查重，零命中、多命中、名字或组织冲突时停止并人工核实。
+1. 阅读已审核需求、业务规则、系统地图、角色模型、现有Fixture契约和历史运行状态；列出reuse/extend/reject/supersede候选。先查重。零命中先区分“应已存在的绑定丢失”和“计划允许创建且尚未绑定的缺项”：前者对账阻塞，后者按已授权工厂补缺；多命中、名字或组织冲突均停止核实。
 2. 建立依赖图并按上游到下游创建；创建前写明原状态、断言、独立Oracle、权限、证据、停止条件和恢复范围。
 3. 写入必须由经批准的UI/正式自动化入口执行，使用幂等“查找→确认唯一→仅补缺项”；不以隐藏接口、数据库或临时脚本绕过UI业务规则。
 4. 写后用独立列表/详情/重新进入页面回读关键字段、对象归属、关联、状态和数量。脚本绿灯或同一表单回显不单独作为完整通过证明。

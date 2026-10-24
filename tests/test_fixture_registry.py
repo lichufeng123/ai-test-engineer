@@ -4,6 +4,8 @@ import multiprocessing
 import sys
 import tempfile
 import unittest
+import time
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'src'))
 
@@ -30,7 +32,7 @@ class FixtureRegistryTests(unittest.TestCase):
         self.r.add_target(TARGET);self.r.add_blueprints([BLUEPRINT])
     def bind(self, key='member.smoke', version='1', target='sit-shop', local_id='m1'):
         self.r.bind(key,version,target,local_id)
-        return self.r.observe(key,version,target,{'local_id':local_id,'target':self.r.target(target),'attributes':{'active':True},'evidence_ref':'run/detail.json'},ttl=60)
+        return self.r.observe(key,version,target,{'local_id':local_id,'target':self.r.target(target),'attributes':{'active':True},'observed_at':time.time(),'evidence_ref':'run/detail.json'},ttl=60)
     def ref(self, mode='read', key='member.smoke'):
         return dict(fixture_key=key,version='1',target_ref='sit-shop',mode=mode)
     def test_explicit_versions_coexist_and_are_immutable(self):
@@ -46,9 +48,9 @@ class FixtureRegistryTests(unittest.TestCase):
     def test_binding_must_have_fresh_identity_and_expected_attributes(self):
         self.r.bind('member.smoke','1','sit-shop','m1')
         with self.assertRaises(self.Error):self.r.resolve('member.smoke','1','sit-shop')
-        wrong=dict(local_id='m1',target={**TARGET,'salon':'other'},attributes={'active':True},evidence_ref='x')
+        wrong=dict(local_id='m1',target={**TARGET,'salon':'other'},attributes={'active':True},observed_at=time.time(),evidence_ref='x')
         with self.assertRaises(self.Error):self.r.observe('member.smoke','1','sit-shop',wrong)
-        self.r.add_blueprints([{**BLUEPRINT,'version':'2'}]);self.bind(version='2',local_id='m2');bad=dict(local_id='m2',target=TARGET,attributes={'active':False},evidence_ref='x')
+        self.r.add_blueprints([{**BLUEPRINT,'version':'2'}]);self.bind(version='2',local_id='m2');bad=dict(local_id='m2',target=TARGET,attributes={'active':False},observed_at=time.time(),evidence_ref='x')
         with self.assertRaises(self.Error):self.r.observe('member.smoke','2','sit-shop',bad)
         with self.assertRaises(self.Error):self.r.resolve('member.smoke','1','sit-shop')
     def test_dependency_cycle_and_credentials_rejected_atomically(self):
@@ -62,7 +64,7 @@ class FixtureRegistryTests(unittest.TestCase):
         self.r.add_blueprints([{**BLUEPRINT,'fixture_key':'alias','pool':'run'}]);self.bind();self.bind(key='alias')
         lease=self.r.acquire([self.ref()], 'reader',60)
         with self.assertRaises(self.Error):self.r.acquire([self.ref('write','alias')], 'writer',60)
-        self.r.release(lease['lease_id'], 'reader', {'m1':{'local_id':'m1','target':TARGET,'attributes':{'active':True},'evidence_ref':'fresh'}})
+        self.r.release(lease['lease_id'], 'reader', {'m1':{'local_id':'m1','target':TARGET,'attributes':{'active':True},'observed_at':time.time(),'evidence_ref':'fresh'}})
         self.r.acquire([self.ref('write','alias')],'writer',60)
         with self.assertRaises(self.Error):self.r.acquire([self.ref()], 'newreader',60)
     def test_expired_lease_blocks_until_reconciled_not_automatically_reused(self):
@@ -90,7 +92,7 @@ class FixtureRegistryTests(unittest.TestCase):
     def test_release_writer_accepts_changed_state_but_consumes_object(self):
         self.r.add_blueprints([{**BLUEPRINT,'fixture_key':'writable','pool':'run'}]);self.bind(key='writable')
         l=self.r.acquire([self.ref('write','writable')],'writer')
-        self.r.release(l['lease_id'],'writer',{'m1':dict(local_id='m1',target=TARGET,attributes={'active':False},evidence_ref='after')})
+        self.r.release(l['lease_id'],'writer',{'m1':dict(local_id='m1',target=TARGET,attributes={'active':False},observed_at=time.time(),evidence_ref='after')})
         with self.assertRaises(self.Error):self.r.resolve('writable','1','sit-shop')
     def test_initialization_is_transactional_across_processes(self):
         path=Path(self.tmp.name)/'new.db';ctx=multiprocessing.get_context('spawn');q=ctx.Queue()
@@ -105,3 +107,49 @@ class FixtureRegistryTests(unittest.TestCase):
         with self.assertRaises(self.Error):self.r.release(l['lease_id'],'other',{})
         with self.assertRaises(self.Error):self.r.release(l['lease_id'],'one',{})
         with self.assertRaises(self.Error):self.r.acquire([self.ref('write')],'two',60)
+
+    def test_old_observation_cannot_refresh_health(self):
+        b=self.bind();obs=b['observation']
+        with patch('ai_test_framework.fixtures.registry.time.time',return_value=time.time()+1000):
+            with self.assertRaises(self.Error):self.r.observe('member.smoke','1','sit-shop',obs)
+        with self.assertRaises(self.Error):self.r.observe('member.smoke','1','sit-shop',obs)
+
+    def test_lease_checks_health_expiry_and_fingerprint(self):
+        self.bind();l=self.r.acquire([self.ref()],'reader')
+        for state,expires in [('quarantined',time.time()+300),('healthy',0)]:
+            with self.r.tx() as db:db.execute('update bindings set state=?,expires=?',(state,expires))
+            with self.assertRaises(self.Error):self.r.assert_lease(l['lease_id'],'reader')
+            with self.assertRaises(self.Error):self.r.heartbeat(l['lease_id'],'reader')
+        with self.r.tx() as db:
+            b=db.execute('select observed from bindings').fetchone();obs=json.loads(b[0]);obs['attributes']['extra']='changed'
+            db.execute('update bindings set state=?,expires=?,observed=?',('healthy',time.time()+300,json.dumps(obs)))
+        with self.assertRaises(self.Error):self.r.assert_lease(l['lease_id'],'reader')
+
+    def test_cross_store_alias_cannot_bypass_lock_or_quarantine(self):
+        other={**TARGET,'target_ref':'other-store','salon':'shop-b'};self.r.add_target(other)
+        self.r.add_blueprints([{**BLUEPRINT,'fixture_key':'writable','entity':'service','pool':'run'}])
+        self.bind(key='writable');self.bind(key='writable',target='other-store')
+        self.r.acquire([self.ref('write','writable')],'one')
+        with self.assertRaises(self.Error):self.r.acquire([{**self.ref('write','writable'),'target_ref':'other-store'}],'two')
+        with self.r.tx() as db:db.execute("update bindings set state='quarantined' where target='other-store'")
+        with self.assertRaises(self.Error):self.r.resolve('writable','1','sit-shop')
+
+    def test_schema_upgrade_requires_idle_leases_and_expires_old_health(self):
+        from ai_test_framework.fixtures.registry import Registry,canonical
+        self.bind();lease=self.r.acquire([self.ref()],'one')
+        with self.r.tx() as db:
+            db.execute('update meta set version=1')
+            db.execute('update bindings set physical=?',(canonical(['sit','z1','brand-a','shop-a','member','m1']),))
+        with self.assertRaisesRegex(self.Error,'SCHEMA_MIGRATION_ACTIVE_LEASES'):Registry(self.path)
+        with self.r.tx() as db:db.execute("update leases set state='released'")
+        upgraded=Registry(self.path)
+        with self.assertRaises(self.Error):upgraded.resolve('member.smoke','1','sit-shop')
+        with upgraded.tx() as db:
+            self.assertEqual(db.execute('select version from meta').fetchone()[0],2)
+            self.assertEqual(json.loads(db.execute('select physical from bindings').fetchone()[0]),['sit','z1','brand-a','member','m1'])
+
+    def test_release_does_not_claim_healthy_after_external_quarantine(self):
+        self.bind();l=self.r.acquire([self.ref()],'reader')
+        with self.r.tx() as db:db.execute("update bindings set state='quarantined',expires=0")
+        result=self.r.release(l['lease_id'],'reader',{'m1':dict(local_id='m1',target=TARGET,attributes={'active':True},observed_at=time.time(),evidence_ref='after')})
+        self.assertEqual(result['outcomes'][0][1],'quarantined')

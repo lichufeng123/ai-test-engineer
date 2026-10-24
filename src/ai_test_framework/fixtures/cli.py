@@ -5,12 +5,12 @@ from pathlib import Path
 from .registry import Registry,FixtureError,database_path
 from .inventory import inventory
 from .executor import prepare
-from .needs import record, freeze, readiness, align
+from .needs import record, freeze, readiness, align, prepare_target
 
 
 def add_parser(commands):
     p=commands.add_parser('fixture',help='本地Fixture登记、健康、租约和离线准备；业务操作由私有Provider执行')
-    p.add_argument('fixture_command',choices=['catalog','register','bind','observe','resolve','acquire','release','heartbeat','prepare','inventory','handbook','record-need','freeze-needs','readiness','align'])
+    p.add_argument('fixture_command',choices=['catalog','register','bind','observe','resolve','acquire','release','heartbeat','prepare','inventory','handbook','record-need','freeze-needs','readiness','align','prepare-target'])
     p.add_argument('--root',default='.')
     p.add_argument('--registry-root')
     p.add_argument('--input')
@@ -57,6 +57,7 @@ def run(args):
             elif op=='prepare':result=prepare(r,data['needs'],data['target_ref'],data['capabilities'])
             elif op=='record-need':result=record(r,data['run_id'],data['need'])
             elif op=='freeze-needs':result=freeze(r,data['run_id'])
+            elif op=='prepare-target':result=prepare_target(r,data['source_run_id'],data['target_ref'],data['capabilities'])
             elif op=='readiness':result=readiness(r,data['needs'],data['target_ref'])
             elif op=='align':result=align(r,data['fixture_key'],data['version'],data['targets'],data['fields'])
             elif op=='handbook':result={'status':'generated','markdown':handbook(r)}

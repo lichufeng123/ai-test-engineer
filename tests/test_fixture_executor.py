@@ -1,3 +1,4 @@
+import time
 import sys
 import tempfile
 import unittest
@@ -15,7 +16,7 @@ class Provider:
         obj={'key':bp['fixture_key'],'id':'m'+str(self.creates)};self.objects[obj['id']]=obj
         if self.unknown:raise TimeoutError()
         return obj
-    def detail(self,obj,bp,target):return {'local_id':obj['id'],'target':target,'attributes':{'active':True},'evidence_ref':'detail.json'}
+    def detail(self,obj,bp,target):return {'local_id':obj['id'],'target':target,'attributes':{'active':True},'observed_at':time.time(),'evidence_ref':'detail.json'}
 
 class ExecutorTests(unittest.TestCase):
     def setUp(self):
@@ -67,3 +68,20 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(self.p.creates,1)
         self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'ready')
         self.assertEqual(self.p.creates,1)
+
+    def test_distinct_store_instances_have_distinct_intents(self):
+        class StoreProvider(Provider):
+            def find(self,bp,target):return [o for o in self.objects.values() if o['salon']==target['salon']]
+            def create(self,bp,target):
+                obj=super().create(bp,target);obj['salon']=target['salon'];return obj
+        self.p=StoreProvider();p=self.plan()
+        self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'ready')
+        t={**TARGET,'target_ref':'other','salon':'other'};self.r.add_target(t)
+        p=self.prepare(self.r,[self.need],'other',['member'])
+        self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'ready')
+        self.assertEqual(self.p.creates,2)
+
+    def test_missing_existing_binding_blocks_before_create(self):
+        self.r.bind('member.smoke','1','sit-shop','historical-id')
+        p=self.plan();result=self.apply(self.r,p,self.p,p['sha256'])
+        self.assertEqual(result['status'],'blocked');self.assertEqual(self.p.creates,0)

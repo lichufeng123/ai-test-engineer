@@ -51,7 +51,7 @@ def apply(registry, plan, provider, authorization_hash):
     try:
         for step in plan['steps']:
             bp=step['blueprint'];key=bp['fixture_key'];version=bp['version'];ref=target['target_ref']
-            iid='ensure:'+digest([scope,key,version])
+            iid='ensure:'+digest([scope,target['salon'],key,version])
             with registry.tx() as db:
                 previous=db.execute('select * from intents where id=?',(iid,)).fetchone()
                 if previous and previous['state']=='unknown':
@@ -60,6 +60,9 @@ def apply(registry, plan, provider, authorization_hash):
             require(isinstance(matches,list) and len(matches)<=1,'FIXTURE_MULTIPLE_MATCHES')
             if previous and previous['state']=='verified':require(len(matches)==1,'PREVIOUS_FIXTURE_DISAPPEARED')
             if not matches:
+                with registry.tx() as db:
+                    bound=db.execute('select 1 from bindings where key=? and version=? and target=?',(key,version,ref)).fetchone()
+                    require(not bound,'BOUND_FIXTURE_MISSING_RECONCILE_BEFORE_CREATE')
                 # Commit intent before the only operation allowed to produce external effects.
                 with registry.tx() as db:
                     db.execute('insert or replace into intents values(?,?,?,?,?)',(iid,plan['sha256'],key,'unknown',canonical({'fixture_key':key,'version':version,'target_ref':ref})))
@@ -100,7 +103,7 @@ def reconcile(registry,plan,provider):
     resolved=[];done=False
     try:
         for step in plan['steps']:
-            bp=step['blueprint'];iid='ensure:'+digest([scope,bp['fixture_key'],bp['version']])
+            bp=step['blueprint'];iid='ensure:'+digest([scope,target['salon'],bp['fixture_key'],bp['version']])
             with registry.tx() as db:row=db.execute('select * from intents where id=?',(iid,)).fetchone()
             if not row or row['state']!='unknown':continue
             require(row['plan_hash']==plan['sha256'],'RECONCILIATION_INTENT_PLAN_MISMATCH')

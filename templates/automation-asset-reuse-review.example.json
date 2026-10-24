@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "feature": "虚构目录查询",
+  "searches": [
+    {
+      "root": "features/fictional_catalog/automation",
+      "file_globs": ["tests/*catalog*.spec.ts", "pages/*Catalog*.ts"],
+      "purpose": "检查已有的目录查询用例和页面模型，避免创建重复脚本"
+    }
+  ],
+  "candidate_assets": [
+    {
+      "path": "features/fictional_catalog/automation/tests/catalog.search.spec.ts",
+      "covered_capabilities": ["查询", "结果计数"],
+      "decision": "extend",
+      "reason": "已有查询流程，只增加独立期望值和逐断言证据"
+    },
+    {
+      "path": "features/fictional_catalog/automation/pages/CatalogPage.ts",
+      "covered_capabilities": ["定位", "列表读取"],
+      "decision": "reuse",
+      "reason": "现有只读页面模型满足示例要求"
+    }
+  ],
+  "proposed_changes": [
+    {
+      "path": "features/fictional_catalog/automation/tests/catalog.search.spec.ts",
+      "change_type": "extend_existing",
+      "gap": "缺少结果计数的独立 Oracle 与证据",
+      "based_on": [
+        "features/fictional_catalog/automation/tests/catalog.search.spec.ts",
+        "features/fictional_catalog/automation/pages/CatalogPage.ts"
+      ]
+    }
+  ],
+  "review_confirmed": true
+}

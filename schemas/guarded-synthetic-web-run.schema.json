@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Single synthetic Playwright run bound to an existing frozen probe",
+  "description": "Only the unchanged official local/synthetic counter starter is executable. A matching reporter still requires independent semantic and privacy review.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "probe", "test_plan", "runner", "config", "package", "web_root", "test_title", "browser_channel"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "probe": {"$ref": "execution-probe.schema.json"},
+    "test_plan": {"$ref": "#/$defs/artifact"},
+    "runner": {"$ref": "#/$defs/artifact"},
+    "config": {"$ref": "#/$defs/artifact"},
+    "package": {"$ref": "#/$defs/artifact"},
+    "web_root": {"const": "automation/web"},
+    "test_title": {"const": "TC-EXAMPLE-001 counter increments once"},
+    "browser_channel": {"enum": ["msedge", "chromium"]}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    }
+  }
+}

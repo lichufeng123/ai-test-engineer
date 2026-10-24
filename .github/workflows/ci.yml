@@ -14,3 +14,65 @@ jobs:
           python-version: '3.11'
       - run: python -m unittest discover -s tests -p 'test_*.py'
       - run: ./bin/ai-test docs-check --root .
+
+  portable-adapter-smoke:
+    # Synthetic/read-only contract only; matrix success is not real device/product approval.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Domain-neutral adapter and onboarding tests
+        run: python -m unittest discover -s tests -p 'test_adapter_trace.py' -v
+      - name: API-only project onboarding tests
+        run: python -m unittest discover -s tests -p 'test_team_doctor.py' -v
+      - name: Versioned wheel builds offline
+        run: python -m pip wheel . --no-deps --no-build-isolation --no-index --wheel-dir portable-wheel
+      - name: Installed adapter module and CLI load
+        run: python -c "import subprocess,sys,pathlib,tempfile,json; w=next(pathlib.Path('portable-wheel').glob('*.whl')); d=tempfile.mkdtemp(); subprocess.check_call([sys.executable,'-m','pip','install','--no-index','--no-deps','--target',d,str(w)]); sys.path.insert(0,d); import ai_test_framework; import ai_test_framework.synthetic_adapter_runner; assert ai_test_framework.__version__==json.loads(pathlib.Path('framework-manifest.json').read_text())['framework_version']; print(ai_test_framework.__file__)"
+
+  report-contract-static:
+    # Public source/packaging negative controls only. This job does not review
+    # business Current, authorize an action, or promote a product report.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fail-closed report-gate unit controls
+        run: python -m unittest discover -s tests -p 'test_report_promotion.py' -v
+      - name: Independent synthetic adapter projects and fail-closed controls
+        run: python -m unittest discover -s tests -p 'test_adapter_trace.py' -v
+      - name: Offline wheel build (no dependency downloads)
+        run: python -m pip wheel . --no-deps --no-build-isolation --no-index --wheel-dir "$RUNNER_TEMP/ai-test-wheel"
+      - name: Verify packaged CLI loads in isolated directory
+        shell: bash
+        run: |
+          python -m pip install --no-index --no-deps --target "$RUNNER_TEMP/ai-test-install" "$RUNNER_TEMP"/ai-test-wheel/*.whl
+          PYTHONPATH="$RUNNER_TEMP/ai-test-install" python -m ai_test_framework.cli report-promotion-check --help
+          PYTHONPATH="$RUNNER_TEMP/ai-test-install" python -m ai_test_framework.cli adapter-trace-check --help
+      - name: Installed standard-report negative control
+        shell: bash
+        run: |
+          printf '%s\n' '{"schema_version":1,"mode":"standard","run_id":"CI-NEGATIVE-001","guarded_receipt":{},"privacy_manifest":{}}' > "$RUNNER_TEMP/promotion-request.json"
+          if PYTHONPATH="$RUNNER_TEMP/ai-test-install" python -m ai_test_framework.cli report-promotion-check --input "$RUNNER_TEMP/promotion-request.json" --root . > "$RUNNER_TEMP/promotion-result.json"; then
+            echo 'Unsafe: standard report was accepted without a trusted business adapter' >&2
+            exit 1
+          fi
+          python - "$RUNNER_TEMP/promotion-result.json" <<'PY'
+          import json, sys
+          result = json.load(open(sys.argv[1], encoding='utf-8'))
+          assert result['status'] == 'blocked'
+          assert 'trusted_business_promotion_adapter_missing' in result['error_codes']
+          assert result['product_verdict'] == 'not_evaluated'
+          PY

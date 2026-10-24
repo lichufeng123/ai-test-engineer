@@ -29,6 +29,7 @@
               "playwright-mcp",
               "chrome-devtools-mcp",
               "ego-lite",
+              "jev-advisor",
               "stagehand"
             ]
           },
@@ -55,7 +56,7 @@
         "formal_regression"
       ],
       "properties": {
-        "new_feature_discovery": {"$ref": "#/$defs/route"},
+        "new_feature_discovery": {"$ref": "#/$defs/discoveryRoute"},
         "playwright_locator_assist": {"$ref": "#/$defs/route"},
         "authenticated_or_visual_fallback": {"$ref": "#/$defs/route"},
         "failure_diagnosis": {"$ref": "#/$defs/route"},
@@ -72,7 +73,8 @@
         "credentials_runtime_only",
         "high_risk_write_requires_approval",
         "agentic_output_requires_playwright_validation",
-        "stagehand"
+        "stagehand",
+        "jev"
       ],
       "properties": {
         "formal_expectations_immutable": {"const": true},
@@ -80,6 +82,21 @@
         "credentials_runtime_only": {"const": true},
         "high_risk_write_requires_approval": {"const": true},
         "agentic_output_requires_playwright_validation": {"const": true},
+        "jev": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authority", "action_space", "read_only_only", "may_execute_actions", "may_select_business_target", "may_change_expectations", "provider_failure", "require_incomplete_terminal"],
+          "properties": {
+            "authority": {"const": "advisory_only"},
+            "action_space": {"const": "finite_local_candidates"},
+            "read_only_only": {"const": true},
+            "may_execute_actions": {"const": false},
+            "may_select_business_target": {"const": false},
+            "may_change_expectations": {"const": false},
+            "provider_failure": {"const": "stop_no_retry"},
+            "require_incomplete_terminal": {"const": true}
+          }
+        },
         "stagehand": {
           "type": "object",
           "additionalProperties": false,
@@ -125,6 +142,16 @@
           "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         }
+      }
+    },
+    "discoveryRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "advisor", "fallbacks"],
+      "properties": {
+        "primary": {"const": "ego-lite"},
+        "advisor": {"const": "jev-advisor"},
+        "fallbacks": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
       }
     },
     "repairRoute": {

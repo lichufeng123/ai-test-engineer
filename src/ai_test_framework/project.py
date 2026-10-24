@@ -1,6 +1,7 @@
 """Project initialization and shared workflow state."""
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Iterable, Dict, Any
 
@@ -81,3 +82,21 @@ def initialize_project(
     index = initialize_work_item_index(root)
     initialize_execution_history(root)
     return {"status": "created", "root": str(root), "config": config, "work_items": index}
+
+
+def scaffold_playwright(root: Path) -> Dict[str, Any]:
+    """Install the fictional, layered Web starter without touching existing files."""
+    root = Path(root).resolve()
+    target = root / "automation" / "web"
+    source = resources.files("ai_test_framework.starter_playwright")
+    names = [".gitignore", "README.md", "package.json", "package-lock.json", "playwright.config.ts",
+             "pages/CounterPage.ts", "flows/counterFlow.ts", "oracles/counter.ts",
+             "evidence/phaseTiming.ts", "evidence/assertionReceipt.ts", "tests/counter.spec.ts"]
+    if any((target / name).exists() for name in names):
+        return {"status": "blocked", "reason": "starter_target_exists", "path": str(target)}
+    for name in names:
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.joinpath(*Path(name).parts).read_bytes())
+    return {"status": "created", "path": str(target), "files": names,
+            "notice": "synthetic example only; no product or Playwright runtime validation"}

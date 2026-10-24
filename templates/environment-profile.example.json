@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "profile_id": "ENV-LOCAL-SYNTHETIC-001",
+  "status": "reviewed",
+  "stage": "local",
+  "zone": "synthetic",
+  "platform": "web",
+  "organization_view_id": "ORG-EXAMPLE",
+  "role_id": "ROLE-EXAMPLE",
+  "build_id": "BUILD-EXAMPLE-001",
+  "capabilities": ["synthetic_ui"],
+  "reviewed_at": "2026-01-01T00:00:00Z",
+  "expires_at": "2099-01-01T00:00:00Z"
+}

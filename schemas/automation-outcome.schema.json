@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Playwright assertion outcome reconciliation input (not product approval)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "mode", "baseline", "runner", "playwright_report", "assertions", "results"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["standard", "rapid"]},
+    "baseline": {"allOf": [{"$ref": "#/$defs/artifact"}, {"type": "object", "required": ["id", "status"], "properties": {"id": {"type": "string", "minLength": 1}, "status": {"enum": ["approved", "provisional"]}}}]},
+    "runner": {"$ref": "#/$defs/artifact"},
+    "playwright_report": {"$ref": "#/$defs/artifact"},
+    "assertions": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "case_id", "fixture_id", "test_title", "oracle"], "properties": {"id": {"type": "string", "minLength": 1}, "case_id": {"type": "string", "minLength": 1}, "fixture_id": {"type": "string", "minLength": 1}, "test_title": {"type": "string", "minLength": 1}, "oracle": {"$ref": "#/$defs/artifact"}}}},
+    "results": {"type": "array", "items": {"type": "object", "required": ["id", "status"], "properties": {"id": {"type": "string", "minLength": 1}, "status": {"enum": ["passed", "failed", "blocked", "not_executed"]}, "fixture_verified": {"type": "boolean"}, "oracle_verdict": {"enum": ["passed", "failed", "blocked", "unknown"]}, "reason": {"type": "string"}, "evidence": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/artifact"}, {"type": "object", "required": ["content_review"], "properties": {"content_review": {"enum": ["passed", "failed", "pending"]}}}]}}}}}
+  },
+  "allOf": [
+    {"if": {"properties": {"mode": {"const": "standard"}}}, "then": {"properties": {"baseline": {"properties": {"status": {"const": "approved"}}}}}},
+    {"if": {"properties": {"mode": {"const": "rapid"}}}, "then": {"properties": {"baseline": {"properties": {"status": {"const": "provisional"}}}}}}
+  ],
+  "$defs": {"artifact": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}}
+}

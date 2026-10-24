@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "feature": "demo-import",
+  "run_id": "RUN-DEMO-READONLY-002",
+  "phase": "preflight",
+  "purpose": "repeat_execution",
+  "mode": "rapid",
+  "questions": [
+    {
+      "id": "EXP-01",
+      "unknown": "Which stable identity distinguishes the expected records?",
+      "status": "implemented",
+      "asset": {"path": "features/demo/oracle.py", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    }
+  ],
+  "runner": {
+    "path": "features/demo/tests/import.spec.ts",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "validation_receipt": {"path": "runs/demo/test-receipt.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+    "remote_backup_receipt": {"path": "runs/demo/backup-receipt.json", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}
+  },
+  "oracle": {"path": "features/demo/oracle.py", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "evidence_plan": {
+    "video": "continuous_on",
+    "error_capture": "on_visible_notice",
+    "assertion_ids": ["PROBE-DEMO-01"]
+  }
+}

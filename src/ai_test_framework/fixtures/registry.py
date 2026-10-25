@@ -175,6 +175,41 @@ class Registry:
         return {**b,'observation':json.loads(observed) if observed else None}
     def resolve(self,key,version,target):
         with self.tx() as db:return self._resolve(db,key,version,target)
+    def restore_consumed(self,key,version,target,lid,owner,observation,ttl=300):
+        """Reconcile an exact restored run instance after its latest owned writer released.
+
+        This never unlocks active/expired leases or clears quarantine/physical aliases.
+        Provider evidence is trusted locally, as in observe(); it is not a remote attestation.
+        """
+        require(type(ttl) is int and 0<ttl<=86400,'TTL_INVALID')
+        with self.tx() as db:
+            b=self._binding(db,key,version,target)
+            bp=self._blueprint(db,key,version)
+            lease=db.execute('select * from leases where id=?',(lid,)).fetchone()
+            require(lease and lease['run']==owner and lease['state']=='released','RESTORE_RELEASED_OWNER_REQUIRED')
+            require(bp['pool']=='run' and b['state']=='consumed','RESTORE_CONSUMED_RUN_REQUIRED')
+            aliases=db.execute('select * from bindings where physical=?',(b['physical'],)).fetchall()
+            require(len(aliases)==1,'RESTORE_ALIASES_REQUIRE_RECONCILIATION')
+            require(not db.execute("select 1 from locks join leases on leases.id=locks.lease where physical=? and leases.state='active'",(b['physical'],)).fetchone(),'RESTORE_ACTIVE_LEASE')
+            lock=db.execute("select * from locks where lease=? and physical=? and mode='write'",(lid,b['physical'])).fetchone()
+            require(lock is not None,'RESTORE_WRITE_SNAPSHOT_REQUIRED')
+            frozen=json.loads(lock['snapshot'])
+            require((frozen['key'],frozen['version'],frozen['target'],frozen['local_id'])==(key,version,target,b['local_id']),'RESTORE_BINDING_MISMATCH')
+            latest=db.execute("select leases.id from locks join leases on leases.id=locks.lease where physical=? and mode='write' order by leases.created desc,leases.id desc limit 1",(b['physical'],)).fetchone()
+            require(latest and latest['id']==lid,'RESTORE_LATEST_WRITER_REQUIRED')
+            released_at=None
+            for event in db.execute("select at,body from audit where action='lease_release' order by id desc"):
+                if json.loads(event['body']).get('lease_id')==lid:
+                    released_at=event['at'];break
+            require(released_at is not None,'RESTORE_RELEASE_RECEIPT_REQUIRED')
+            self._matches(db,b,observation)
+            require(observation['observed_at']>released_at and observation['observed_at']>frozen['observation']['observed_at'],'RESTORE_FRESH_READBACK_REQUIRED')
+            require(observation['attributes']==frozen['observation']['attributes'],'RESTORE_SNAPSHOT_MISMATCH')
+            db.execute("update bindings set state='healthy',observed=?,expires=? where key=? and version=? and target=?",
+              (canonical(observation),observation['observed_at']+ttl,key,version,target))
+            self.audit(db,'restore_consumed',dict(fixture_key=key,version=version,target_ref=target,lease_id=lid,run_id=owner))
+        return dict(status='healthy',fixture_key=key,version=version,target_ref=target,local_id=b['local_id'])
+
     def catalog(self):
         with self.tx() as db:
             return {'status':'ready','blueprints':[json.loads(r[0]) for r in db.execute('select body from blueprints order by key,version')],

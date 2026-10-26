@@ -122,3 +122,56 @@ def reconcile(registry,plan,provider):
     finally:
         with registry.tx() as db:
             db.execute('update intents set state=? where id=?',('released' if done else 'unknown',scope))
+
+
+def authorize_absent_retry(registry, plan, provider, proof, authorization_hash):
+    """Explicitly settle a stopped, proven absent write before a new authorized run.
+
+    Unlike reconcile(), this cannot adopt an object or clear a binding. The
+    trusted business adapter must prove async settlement and unchanged context;
+    the kernel repeats the absence lookup and refuses outstanding tenant leases.
+    No business create is performed here. Old evidence remains in the audit.
+    """
+    import math
+    safe(proof)
+    require(plan == prepare(registry, plan['needs'], plan['target']['target_ref'],
+                           provider.capabilities(plan['target']),
+                           provider.contract() if hasattr(provider, 'contract') else None), 'RECONCILIATION_PLAN_CHANGED')
+    require(authorization_hash == plan['sha256'] == proof.get('plan_sha256'), 'RETRY_AUTHORIZATION_MISMATCH')
+    at = proof.get('observed_at')
+    require(type(at) in (int, float) and math.isfinite(at) and time.time()-60 <= at <= time.time()+5,
+            'RETRY_PROOF_STALE')
+    require(proof.get('settled') is True, 'RETRY_ASYNC_NOT_SETTLED')
+    identifier(proof.get('evidence_ref'))
+    target = plan['target']; tenant = [target[k] for k in ('stage','zone','organization')]
+    scope = 'factory:' + digest(tenant)
+    with registry.tx() as db:
+        original = db.execute('select * from intents where id=?', (scope,)).fetchone()
+        require(original and original['state']=='unknown' and original['plan_hash']==plan['sha256'], 'RETRY_SCOPE_MISMATCH')
+        original = dict(original)
+        require(proof.get('previous_scope_sha256')==digest(original), 'RETRY_PROOF_ATTEMPT_MISMATCH')
+        pending = [dict(row) for row in db.execute("select * from intents where plan_hash=? and state='unknown' and step!='scope'", (plan['sha256'],))]
+    expected = {}
+    for step in plan['steps']:
+        bp = step['blueprint']; iid = 'ensure:' + digest([scope,target['salon'],bp['fixture_key'],bp['version']])
+        if any(row['id']==iid for row in pending): expected[iid]=bp
+    require(expected and set(expected)=={row['id'] for row in pending}, 'RETRY_UNKNOWN_SET_MISMATCH')
+    require(sorted(proof.get('absent_keys',[]))==sorted(bp['fixture_key'] for bp in expected.values()), 'RETRY_ABSENT_SET_MISMATCH')
+    for bp in expected.values():
+        matches = provider.find(bp,target)
+        require(isinstance(matches,list) and not matches, 'RETRY_OBJECT_OBSERVED')
+    with registry.tx() as db:
+        current = db.execute('select * from intents where id=?',(scope,)).fetchone()
+        require(current and dict(current)==original,'RETRY_SCOPE_CHANGED')
+        for lock in db.execute("select physical from locks join leases on leases.id=locks.lease where leases.state='active'"):
+            require(json.loads(lock['physical'])[:3]!=tenant,'RETRY_TENANT_LEASE_UNRESOLVED')
+        for row in pending:
+            current=db.execute('select * from intents where id=?',(row['id'],)).fetchone()
+            require(current and dict(current)==row,'RETRY_INTENT_CHANGED')
+            bp=expected[row['id']]
+            require(not db.execute('select 1 from bindings where key=? and version=? and target=?',
+                                   (bp['fixture_key'],bp['version'],target['target_ref'])).fetchone(),'RETRY_BOUND_OBJECT_MISSING')
+        for row in pending:db.execute("update intents set state='reconciled_absent' where id=?",(row['id'],))
+        db.execute("update intents set state='released' where id=?",(scope,))
+        registry.audit(db,'explicit_absent_retry_authorized',dict(previous_scope=original,previous_intents=pending,proof=proof))
+    return dict(status='reconciled_absent',business_writes=0,absent_keys=proof['absent_keys'])

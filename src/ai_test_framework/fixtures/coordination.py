@@ -108,3 +108,41 @@ def recover(registry, claim, proof):
         registry.audit(db, 'execution_claim_recover', dict(owner_run=claim['owner_run'],
                        holder_id=claim['holder_id'], proof=proof))
     return dict(status='released', owner_run=claim['owner_run'], holder_id=claim['holder_id'])
+
+
+def recover_no_effect(registry, claim, proof, lease_id, observations):
+    """Recover a stopped writer only after every physical object is unchanged.
+
+    Explicit provider evidence is mandatory even for an expired lease. Claims,
+    lease and observations commit atomically; a mismatch frees nothing.
+    """
+    safe(proof); safe(observations); identifier(lease_id)
+    require(all(proof.get(key)==claim.get(key) for key in ['owner_run','holder_id','context_sha256']), 'EXECUTION_RECOVERY_SCOPE_MISMATCH')
+    require(proof.get('resources_sha256')==digest(claim.get('resources')), 'EXECUTION_RECOVERY_SET_MISMATCH')
+    at=proof.get('observed_at')
+    require(type(at) in (int,float) and math.isfinite(at) and time.time()-60<=at<=time.time()+5 and at>claim['acquired_at'], 'EXECUTION_RECOVERY_PROOF_STALE')
+    identifier(proof.get('evidence_ref'))
+    with registry.tx() as db:
+        ids=_owned_rows(db,claim,{'active','unknown'})
+        require(not _writer_alive(claim['owner_pid']), 'EXECUTION_WRITER_ALIVE')
+        lease=db.execute('select * from leases where id=?',(lease_id,)).fetchone()
+        require(lease and lease['run']==claim['owner_run'] and lease['state']=='active', 'RECOVERY_LEASE_OWNER_MISMATCH')
+        locks=list(db.execute('select * from locks where lease=?',(lease_id,)))
+        require(locks and set(observations)=={lock['physical'] for lock in locks}, 'RECOVERY_FULL_EFFECT_SET_REQUIRED')
+        for lock in locks:
+            frozen=json.loads(lock['snapshot']);obs=observations[lock['physical']]
+            current=registry._binding(db,frozen['key'],frozen['version'],frozen['target'])
+            require(current['physical']==lock['physical'] and current['local_id']==frozen['local_id'], 'RECOVERY_BINDING_CHANGED')
+            require(not db.execute("select 1 from bindings where physical=? and state in ('quarantined','consumed')",(lock['physical'],)).fetchone(),'RECOVERY_POISONED_RESOURCE')
+            registry._matches(db,frozen,obs)
+            latest=json.loads(current['observed']) if current['observed'] else {}
+            require(obs['observed_at']>latest.get('observed_at',0),'RECOVERY_OBSERVATION_SUPERSEDED')
+            require(obs['observed_at']>lease['created'] and obs['attributes']==frozen['observation']['attributes'],'RECOVERY_RESOURCE_NOT_UNCHANGED')
+        for lock in locks:
+            frozen=json.loads(lock['snapshot']);obs=observations[lock['physical']]
+            db.execute("update bindings set state='healthy',observed=?,expires=? where key=? and version=? and target=?",
+                       (canonical(obs),obs['observed_at']+300,frozen['key'],frozen['version'],frozen['target']))
+        db.execute("update leases set state='released' where id=?",(lease_id,))
+        for ident in ids:db.execute("update intents set state='released' where id=?",(ident,))
+        registry.audit(db,'no_effect_writer_recovery',dict(lease_id=lease_id,claim=claim,proof=proof,observations=observations))
+    return dict(status='released',lease_id=lease_id,owner_run=claim['owner_run'])

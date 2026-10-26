@@ -104,3 +104,39 @@ class CoordinationTests(unittest.TestCase):
             worker.join(timeout=10)
             self.assertEqual(worker.exitcode, 0)
         self.assertEqual(sorted(results), ['EXECUTION_RESOURCE_BUSY', 'acquired'])
+
+
+class NoEffectRecoveryTests(unittest.TestCase):
+    setUp=CoordinationTests.setUp
+    claim=CoordinationTests.claim
+    proof=CoordinationTests.proof
+    def setup_lease(self):
+        from test_fixture_registry import TARGET,BLUEPRINT
+        self.registry.add_target(TARGET)
+        bp={**BLUEPRINT,'pool':'run'};self.registry.add_blueprints([bp]);self.registry.bind(bp['fixture_key'],'1',TARGET['target_ref'],'object-a')
+        obs=dict(local_id='object-a',target=TARGET,attributes=bp['attributes'],observed_at=time.time(),evidence_ref='before')
+        self.registry.observe(bp['fixture_key'],'1',TARGET['target_ref'],obs)
+        lease=self.registry.acquire([dict(fixture_key=bp['fixture_key'],version='1',target_ref=TARGET['target_ref'],mode='write')],'RUN-A')
+        with self.registry.tx() as db:lock=db.execute('select physical from locks where lease=?',(lease['lease_id'],)).fetchone()[0]
+        return lease,{lock:{**obs,'observed_at':time.time(),'evidence_ref':'fresh-unchanged'}}
+    def test_no_effect_recovery_requires_dead_owner_full_set_and_unchanged_native_evidence(self):
+        from ai_test_framework.fixtures.coordination import recover_no_effect
+        claim=self.claim();lease,obs=self.setup_lease()
+        with self.assertRaisesRegex(FixtureError,'EXECUTION_WRITER_ALIVE'):recover_no_effect(self.registry,claim,self.proof(claim),lease['lease_id'],obs)
+        with patch('ai_test_framework.fixtures.coordination._writer_alive',return_value=False):
+            with self.assertRaises(FixtureError):recover_no_effect(self.registry,claim,self.proof(claim),lease['lease_id'],{})
+            changed=copy.deepcopy(obs);next(iter(changed.values()))['attributes']={'active':False}
+            with self.assertRaises(FixtureError):recover_no_effect(self.registry,claim,self.proof(claim),lease['lease_id'],changed)
+            recover_no_effect(self.registry,claim,self.proof(claim),lease['lease_id'],obs)
+        with self.registry.tx() as db:
+            self.assertEqual(db.execute('select state from leases where id=?',(lease['lease_id'],)).fetchone()[0],'released')
+            self.assertEqual(db.execute('select state from bindings').fetchone()[0],'healthy')
+
+    def test_older_unchanged_receipt_cannot_overwrite_a_newer_registry_observation(self):
+        from ai_test_framework.fixtures.coordination import recover_no_effect
+        claim=self.claim();lease,observations=self.setup_lease();obs=next(iter(observations.values()))
+        with self.registry.tx() as db:binding=dict(db.execute('select * from bindings').fetchone())
+        newer={**obs,'observed_at':time.time(),'attributes':{**obs['attributes'],'after_effect':True}}
+        self.registry.observe(binding['key'],binding['version'],binding['target'],newer)
+        with patch('ai_test_framework.fixtures.coordination._writer_alive',return_value=False),self.assertRaises(FixtureError):
+            recover_no_effect(self.registry,claim,self.proof(claim),lease['lease_id'],observations)

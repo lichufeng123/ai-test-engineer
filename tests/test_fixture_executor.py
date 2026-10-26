@@ -85,3 +85,38 @@ class ExecutorTests(unittest.TestCase):
         self.r.bind('member.smoke','1','sit-shop','historical-id')
         p=self.plan();result=self.apply(self.r,p,self.p,p['sha256'])
         self.assertEqual(result['status'],'blocked');self.assertEqual(self.p.creates,0)
+
+
+class AbsentRetryTests(unittest.TestCase):
+    setUp=ExecutorTests.setUp
+    plan=ExecutorTests.plan
+    def rejected(self):
+        p=self.plan()
+        self.p.create=lambda *args: (_ for _ in ()).throw(TimeoutError())
+        self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'blocked')
+        return p
+    def proof(self,p):
+        from ai_test_framework.fixtures.registry import digest
+        with self.r.tx() as db:scope=dict(db.execute("select * from intents where step='scope'").fetchone())
+        return dict(plan_sha256=p['sha256'],previous_scope_sha256=digest(scope),observed_at=time.time(),evidence_ref='fresh-absence.json',settled=True,absent_keys=['member.smoke'])
+    def test_fresh_settled_absence_and_explicit_new_authorization_allows_one_new_attempt(self):
+        from ai_test_framework.fixtures.executor import authorize_absent_retry
+        p=self.rejected();proof=self.proof(p)
+        result=authorize_absent_retry(self.r,p,self.p,proof,p['sha256'])
+        self.assertEqual(result['status'],'reconciled_absent')
+        self.p=Provider();self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'ready')
+        self.assertEqual(self.p.creates,1)
+    def test_absence_recovery_rejects_unsettled_stale_wrong_scope_and_existing_object(self):
+        from ai_test_framework.fixtures.executor import authorize_absent_retry
+        p=self.rejected()
+        for change in [dict(settled=False),dict(observed_at=time.time()-100),dict(plan_sha256='b'*64),dict(absent_keys=[])]:
+            with self.assertRaises(self.Error):authorize_absent_retry(self.r,p,self.p,{**self.proof(p),**change},p['sha256'])
+        self.p.objects={'m1':dict(key='member.smoke',id='m1')}
+        with self.assertRaises(self.Error):authorize_absent_retry(self.r,p,self.p,self.proof(p),p['sha256'])
+
+    def test_prior_attempt_settlement_proof_cannot_authorize_a_later_unknown_attempt(self):
+        from ai_test_framework.fixtures.executor import authorize_absent_retry
+        p=self.rejected();proof=self.proof(p)
+        authorize_absent_retry(self.r,p,self.p,proof,p['sha256'])
+        self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'blocked')
+        with self.assertRaises(self.Error):authorize_absent_retry(self.r,p,self.p,proof,p['sha256'])

@@ -93,11 +93,8 @@ def build_readiness_plan(source: Dict[str, Any], *, ai_capability_catalog=None,
     )
     if source["schema_version"] not in (1, 2):
         raise ValueError("unsupported_schema_version")
-    if source['schema_version'] == 1 and (
-        any(key in source for key in ('catalog_ref', 'ai_capabilities', 'oracle_resources', 'testability_assessments'))
-        or any('execution_strategy' in c or 'ai_capability_bindings' in c
-               or 'assertion_oracle_bindings' in c for c in source['case_requirements'])
-    ):
+    from .ai_test_routing import has_ai_contract
+    if source['schema_version'] == 1 and has_ai_contract(source):
         raise ValueError('ai_contract_requires_v2')
 
     plan = copy.deepcopy(source)
@@ -219,6 +216,9 @@ def evaluate_execution_readiness(
     )
 
     error_codes: List[str] = []
+    from .ai_test_routing import has_ai_contract
+    if plan.get('schema_version') == 1 and has_ai_contract(plan):
+        error_codes.append('ai_contract_requires_v2')
     if plan.get('schema_version') not in (1, 2):
         error_codes.append('unsupported_schema_version')
     if plan.get('schema_version') == 2:

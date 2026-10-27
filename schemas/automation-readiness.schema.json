@@ -280,6 +280,13 @@
                     "required": [
                       "composite_authorities"
                     ]
+                  },
+                  "else": {
+                    "not": {
+                      "required": [
+                        "composite_authorities"
+                      ]
+                    }
                   }
                 }
               ]
@@ -836,6 +843,16 @@
             {
               "required": [
                 "testability_assessments"
+              ]
+            },
+            {
+              "required": [
+                "deterministic_fallbacks"
+              ]
+            },
+            {
+              "required": [
+                "resource_check_max_age_seconds"
               ]
             }
           ]

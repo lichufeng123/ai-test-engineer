@@ -28,6 +28,20 @@ DISPOSITIONS = {'reuse_existing_fixture', 'extend_fixture', 'build_testability_a
                 'runtime_ai_required', 'manual_only_pending_oracle', 'not_applicable'}
 
 
+def has_ai_contract(source):
+    return (any(key in source for key in ('catalog_ref', 'ai_capabilities', 'oracle_resources',
+                'testability_assessments', 'deterministic_fallbacks', 'resource_check_max_age_seconds'))
+            or any(any(key in case for key in ('execution_strategy', 'ai_capability_bindings',
+                                              'assertion_oracle_bindings'))
+                   for case in source.get('case_requirements', [])))
+
+
+def assertion_authorities(assertion):
+    if assertion['required_conclusion_authority'] == 'composite':
+        return set(assertion['composite_authorities'])
+    return {assertion['required_conclusion_authority']}
+
+
 def require(ok, code):
     if not ok:
         raise ValueError(code)
@@ -111,6 +125,8 @@ def validate_routing_plan(plan: Dict[str, Any], catalog, provenance):
             authority = assertion.get('required_conclusion_authority')
             require(authority in AUTHORITIES | {'composite'}, 'invalid_conclusion_authority')
             required = assertion.get('composite_authorities', []) if authority == 'composite' else [authority]
+            require(authority == 'composite' or 'composite_authorities' not in assertion,
+                    'composite_field_requires_composite_authority')
             if authority == 'composite':
                 require(isinstance(required, list) and len(required) >= 2
                         and len(set(required)) == len(required) and set(required) <= AUTHORITIES,
@@ -137,8 +153,7 @@ def validate_routing_plan(plan: Dict[str, Any], catalog, provenance):
             require(binding['necessity'] == 'required' or not supported, 'nonrequired_ai_formal_assertion')
             cap = capabilities[binding['capability_id']]
             if cap['conclusion_authority'] == 'human_required':
-                require(any('human_review_receipt' == a['required_conclusion_authority'] or
-                            'human_review_receipt' in a.get('composite_authorities', [])
+                require(any('human_review_receipt' in assertion_authorities(a)
                             for a in assertions.values()), 'human_review_oracle_required')
             referenced.add(binding['capability_id'])
         if strategy == 'human_semantic_review':

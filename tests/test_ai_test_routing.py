@@ -83,6 +83,21 @@ def ai_check(**overrides):
 
 
 class RoutingGateTest(unittest.TestCase):
+    def test_execution_entry_rejects_downgraded_v2_contract(self):
+        p=freeze(); p['schema_version']=1
+        c=confirmed_v2(p,schema_version=1,ai_capability_checks=[],oracle_resource_checks=[])
+        r=evaluate_execution_readiness(p,c)
+        self.assertEqual(r['ready_case_ids'],[])
+        self.assertIn('ai_contract_requires_v2',r['error_codes'])
+
+    def test_inactive_composite_field_cannot_satisfy_human_requirement(self):
+        s=source_v2(); cat=catalog(); cat['capabilities'][0].update(
+            role='semantic_quality_review',conclusion_authority='human_required')
+        s['case_requirements'][1]['assertion_oracle_bindings'][0]['composite_authorities']=[
+            'deterministic_source','human_review_receipt']
+        with self.assertRaisesRegex(ValueError,'composite_field_requires_composite_authority'):
+            freeze(s,cat=cat)
+
     def test_wrong_confirmation_version_and_catalog_drift_fail_closed(self):
         p=freeze()
         for patch,code in [({'schema_version':1},'confirmation_schema_mismatch'),

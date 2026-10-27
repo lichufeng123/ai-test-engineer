@@ -165,9 +165,9 @@ class Registry:
             self.audit(db,'observe',dict(fixture_key=key,target_ref=target,accepted=not bool(error)))
         if error:raise error
         return self.resolve(key,version,target)
-    def _resolve(self,db,key,version,target):
+    def _resolve(self,db,key,version,target,allow_expired=False):
         b=self._binding(db,key,version,target)
-        require(b['state']=='healthy' and b['expires']>time.time(),'FIXTURE_NOT_HEALTHY')
+        require(b['state']=='healthy' and (allow_expired or b['expires']>time.time()),'FIXTURE_NOT_HEALTHY')
         # Aliases may not hide a poisoned physical object.
         poison=db.execute("select 1 from bindings where physical=? and state in ('quarantined','consumed')",(b['physical'],)).fetchone()
         require(not poison,'PHYSICAL_OBJECT_UNAVAILABLE')
@@ -175,6 +175,18 @@ class Registry:
         return {**b,'observation':json.loads(observed) if observed else None}
     def resolve(self,key,version,target):
         with self.tx() as db:return self._resolve(db,key,version,target)
+    def invalidate(self,key,version,target,reason,evidence_ref):
+        """Quarantine known physical aliases on trusted, complete drift evidence.
+
+        Does not release leases, remove bindings, adopt a new identity or restore
+        health. Transport failures must not call this operation.
+        """
+        identifier(reason);identifier(evidence_ref)
+        with self.tx() as db:
+            b=self._binding(db,key,version,target)
+            db.execute("update bindings set state='quarantined',expires=0 where physical=?",(b['physical'],))
+            self.audit(db,'invalidate',dict(fixture_key=key,version=version,target_ref=target,reason=reason,evidence_ref=evidence_ref))
+
     def restore_consumed(self,key,version,target,lid,owner,observation,ttl=300):
         """Reconcile an exact restored run instance after its latest owned writer released.
 
@@ -216,6 +228,16 @@ class Registry:
                 'targets':[json.loads(r[0]) for r in db.execute('select body from targets order by ref')],
                 'bindings':[dict(r) for r in db.execute('select key,version,target,local_id,state,expires from bindings order by key,version,target')]}
     def acquire(self,requests,run_id,ttl=300,owner_claim=None):
+        return self._acquire(requests,run_id,ttl,owner_claim)
+    def acquire_health_check(self,requests,run_id,ttl=300,owner_claim=None):
+        """Reserve a read-only snapshot before refreshing expired health.
+
+        Binding state, physical poison and active/expired lease conflicts remain
+        atomic with insertion. Ordinary consumers still require fresh health.
+        """
+        require(isinstance(requests,list) and requests and all(isinstance(r,dict) and r.get('mode')=='read' for r in requests),'HEALTH_CHECK_READ_ONLY')
+        return self._acquire(requests,run_id,ttl,owner_claim,health_check=True)
+    def _acquire(self,requests,run_id,ttl=300,owner_claim=None,health_check=False):
         identifier(run_id);require(type(ttl) is int and 0<ttl<=3600,'TTL_INVALID');require(isinstance(requests,list) and requests,'EFFECT_SET_REQUIRED')
         with self.tx() as db:
             if owner_claim is not None:
@@ -225,7 +247,7 @@ class Registry:
             effects={}
             for req in requests:
                 require(set(req)=={'fixture_key','version','target_ref','mode'} and req['mode'] in {'read','write'},'EFFECT_INVALID')
-                b=self._resolve(db,req['fixture_key'],req['version'],req['target_ref'])
+                b=self._resolve(db,req['fixture_key'],req['version'],req['target_ref'],allow_expired=health_check)
                 bp=self._blueprint(db,b['key'],b['version'])
                 require(req['mode']!='write' or bp['pool']=='run','SHARED_POOL_WRITE_FORBIDDEN')
                 prev=effects.get(b['physical']);mode='write' if req['mode']=='write' or prev and prev['mode']=='write' else 'read'
@@ -236,7 +258,7 @@ class Registry:
                     require(row['mode']=='read' and item['mode']=='read','LEASE_CONFLICT')
             lid=uuid.uuid4().hex;now=time.time();db.execute('insert into leases values(?,?,?,?,?)',(lid,run_id,now+ttl,'active',now))
             for physical,item in effects.items():db.execute('insert into locks values(?,?,?,?)',(lid,physical,item['mode'],canonical(item['binding'])))
-            self.audit(db,'lease_acquire',dict(lease_id=lid,run_id=run_id,resources=len(effects)))
+            self.audit(db,'lease_acquire',dict(lease_id=lid,run_id=run_id,resources=len(effects),health_check=health_check))
             if owner_claim is not None:
                 self.audit(db,'execution_dependency_lease',dict(lease_id=lid,claim=owner_claim,requests=requests))
             return {'status':'ready','lease_id':lid,'run_id':run_id,'expires':now+ttl,'physical_keys':sorted(effects)}

@@ -46,6 +46,17 @@ class FixtureRegistryTests(unittest.TestCase):
             self.assertEqual(db.execute('select count(*) from leases').fetchone()[0],1)
         coordination.release(self.r,claim,'released','done')
         with self.assertRaises(self.Error):self.r.acquire([self.ref()],'RUN-A',owner_claim=claim)
+    def test_health_check_lease_atomic_expired_snapshot_readonly_and_poison_safe(self):
+        self.bind();self.r.add_blueprints([{**BLUEPRINT,'fixture_key':'writable','pool':'run'}]);self.bind(key='writable')
+        with self.r.tx() as db:db.execute("update bindings set expires=0 where key='member.smoke'")
+        with self.assertRaises(self.Error):self.r.acquire([self.ref()],'ordinary')
+        with self.assertRaises(self.Error):self.r.acquire_health_check([self.ref('write','writable')],'bad')
+        lease=self.r.acquire_health_check([self.ref()],'health')
+        with self.assertRaisesRegex(self.Error,'LEASE_CONFLICT'):self.r.acquire([self.ref('write','writable')],'writer')
+        self.r.invalidate('member.smoke','1','sit-shop','native-confirmed-missing','run/complete-native.json')
+        with self.assertRaises(self.Error):self.r.acquire_health_check([self.ref()],'poison')
+        with self.assertRaises(self.Error):self.r.resolve('writable','1','sit-shop')
+        with self.r.tx() as db:self.assertEqual(db.execute('select state from leases where id=?',(lease['lease_id'],)).fetchone()[0],'active')
     def test_explicit_versions_coexist_and_are_immutable(self):
         self.bind();bp={**BLUEPRINT,'version':'2'};self.r.add_blueprints([bp]);self.bind(version='2',local_id='m2')
         self.assertEqual(self.r.resolve('member.smoke','1','sit-shop')['local_id'],'m1')

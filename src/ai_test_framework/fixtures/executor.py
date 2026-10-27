@@ -115,7 +115,10 @@ def reconcile(registry,plan,provider):
             with registry.tx() as db:db.execute("update intents set state='verified' where id=?",(iid,))
             resolved.append(bp['fixture_key'])
         with registry.tx() as db:
-            pending=db.execute("select 1 from intents where plan_hash=? and state='unknown'",(plan['sha256'],)).fetchone()
+            # Execution ownership is reconciled by its canonical provider proof,
+            # separately from these business inputs; never clear that claim here.
+            from .coordination import STEP as execution_owner_step
+            pending=db.execute("select 1 from intents where plan_hash=? and state='unknown' and not (step=? and id like 'execution-claim:%')",(plan['sha256'],execution_owner_step)).fetchone()
             require(not pending,'UNKNOWN_INTENTS_REMAIN')
         done=True
         return {'status':'reconciled','resolved':resolved,'business_writes':0}

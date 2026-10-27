@@ -69,6 +69,26 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(self.apply(self.r,p,self.p,p['sha256'])['status'],'ready')
         self.assertEqual(self.p.creates,1)
 
+    def test_input_reconciliation_preserves_separate_unknown_execution_owner(self):
+        from ai_test_framework.fixtures.executor import reconcile
+        from ai_test_framework.fixtures import coordination
+        p=self.plan();self.p.unknown=True;self.apply(self.r,p,self.p,p['sha256']);self.p.unknown=False
+        claim=coordination.acquire(self.r,'RUN-OWNER',['employee-training:example'],p['sha256'])
+        coordination.release(self.r,claim,'unknown','original-run')
+        result=reconcile(self.r,p,self.p)
+        self.assertEqual(result['status'],'reconciled');self.assertEqual(self.p.creates,1)
+        with self.r.tx() as db:
+            row=db.execute('select state,body from intents where id=?',(claim['resource_ids'][0],)).fetchone()
+            self.assertEqual(row['state'],'unknown')
+            import json
+            self.assertEqual(json.loads(row['body']),claim)
+
+    def test_unrecognized_unknown_business_intent_still_blocks_reconciliation(self):
+        from ai_test_framework.fixtures.executor import reconcile
+        p=self.plan();self.p.unknown=True;self.apply(self.r,p,self.p,p['sha256']);self.p.unknown=False
+        with self.r.tx() as db:db.execute('insert into intents values(?,?,?,?,?)',('other-effect',p['sha256'],'other-business','unknown','{}'))
+        with self.assertRaisesRegex(self.Error,'UNKNOWN_INTENTS_REMAIN'):reconcile(self.r,p,self.p)
+
     def test_distinct_store_instances_have_distinct_intents(self):
         class StoreProvider(Provider):
             def find(self,bp,target):return [o for o in self.objects.values() if o['salon']==target['salon']]

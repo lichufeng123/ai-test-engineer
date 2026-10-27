@@ -215,9 +215,13 @@ class Registry:
             return {'status':'ready','blueprints':[json.loads(r[0]) for r in db.execute('select body from blueprints order by key,version')],
                 'targets':[json.loads(r[0]) for r in db.execute('select body from targets order by ref')],
                 'bindings':[dict(r) for r in db.execute('select key,version,target,local_id,state,expires from bindings order by key,version,target')]}
-    def acquire(self,requests,run_id,ttl=300):
+    def acquire(self,requests,run_id,ttl=300,owner_claim=None):
         identifier(run_id);require(type(ttl) is int and 0<ttl<=3600,'TTL_INVALID');require(isinstance(requests,list) and requests,'EFFECT_SET_REQUIRED')
         with self.tx() as db:
+            if owner_claim is not None:
+                from .coordination import _owned_rows
+                _owned_rows(db,owner_claim,{'active'})
+                require(owner_claim['owner_run']==run_id,'LEASE_EXECUTION_OWNER_MISMATCH')
             effects={}
             for req in requests:
                 require(set(req)=={'fixture_key','version','target_ref','mode'} and req['mode'] in {'read','write'},'EFFECT_INVALID')
@@ -233,6 +237,8 @@ class Registry:
             lid=uuid.uuid4().hex;now=time.time();db.execute('insert into leases values(?,?,?,?,?)',(lid,run_id,now+ttl,'active',now))
             for physical,item in effects.items():db.execute('insert into locks values(?,?,?,?)',(lid,physical,item['mode'],canonical(item['binding'])))
             self.audit(db,'lease_acquire',dict(lease_id=lid,run_id=run_id,resources=len(effects)))
+            if owner_claim is not None:
+                self.audit(db,'execution_dependency_lease',dict(lease_id=lid,claim=owner_claim,requests=requests))
             return {'status':'ready','lease_id':lid,'run_id':run_id,'expires':now+ttl,'physical_keys':sorted(effects)}
     def _lease(self,db,lid,owner):
         row=db.execute('select * from leases where id=?',(lid,)).fetchone()

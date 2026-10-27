@@ -35,6 +35,17 @@ class FixtureRegistryTests(unittest.TestCase):
         return self.r.observe(key,version,target,{'local_id':local_id,'target':self.r.target(target),'attributes':{'active':True},'observed_at':time.time(),'evidence_ref':'run/detail.json'},ttl=60)
     def ref(self, mode='read', key='member.smoke'):
         return dict(fixture_key=key,version='1',target_ref='sit-shop',mode=mode)
+    def test_lease_claim_binding_is_atomic_and_requires_current_exact_owner(self):
+        from ai_test_framework.fixtures import coordination
+        self.bind();claim=coordination.acquire(self.r,'RUN-A',['workflow:one'],'a'*64)
+        with self.assertRaises(self.Error):self.r.acquire([self.ref()],'RUN-B',owner_claim=claim)
+        lease=self.r.acquire([self.ref()],'RUN-A',owner_claim=claim)
+        with self.r.tx() as db:
+            body=json.loads(db.execute("select body from audit where action='execution_dependency_lease'").fetchone()[0])
+            self.assertEqual(body,dict(lease_id=lease['lease_id'],claim=claim,requests=[self.ref()]))
+            self.assertEqual(db.execute('select count(*) from leases').fetchone()[0],1)
+        coordination.release(self.r,claim,'released','done')
+        with self.assertRaises(self.Error):self.r.acquire([self.ref()],'RUN-A',owner_claim=claim)
     def test_explicit_versions_coexist_and_are_immutable(self):
         self.bind();bp={**BLUEPRINT,'version':'2'};self.r.add_blueprints([bp]);self.bind(version='2',local_id='m2')
         self.assertEqual(self.r.resolve('member.smoke','1','sit-shop')['local_id'],'m1')

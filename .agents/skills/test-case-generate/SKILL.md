@@ -73,3 +73,11 @@ ai-test flow-check \
 审核通过后，用稳定用例ID补全需求阶段的 `automation_readiness_plan`，把每条用例绑定到所需角色、fixture、环境和证据点，重新冻结计划哈希；再生成 `automation_execution_bundle`，绑定运行ID、基线ID、需求/规则/用例哈希、适用环境、测试数据计划、证据计划和执行资产引用。账号、密码、Cookie与Token只从安全运行配置读取。
 
 测试发现遗漏时，先判断需要补需求、规则、用例还是执行资产，再生成可审核差异并更新同一基线。执行状态和报告不能偷偷改变用例预期。
+
+## AI能力与自动化可测性路由
+
+动态问答、开放陪练、内容生成或语义复核的用例设计／执行，必须先读取项目AI测试方法目录并遵循[AI参与测试路由](../../../docs/AI_ASSISTED_TESTING_ROUTING.zh-CN.md)。新增或实质修改Case先登记testability_assessments，主动评估隔离Fixture、版本化审核参考答案／blueprint、独立金标／观测点、维护人及清理策略，不能直接永久判manual_only。该推导不扩大业务写权限。
+
+用既有readiness-plan／readiness-check生成v2计划和执行建议，逐稳定Case声明execution_strategy、ai_capability_bindings及assertion_oracle_bindings。向用户说明具体“AI＋Minium／Playwright／API”分工。能力目录配置不等于当前可用；本次ai_capability_checks和oracle_resource_checks须有新鲜时间、正确环境、版本／哈希及非敏感证据。
+
+没有运行时模型时，开放式blueprint不替代逐轮语义回答，也不是评分Oracle；完整问答Case保持blocked。只有已审核且有独立ID／预期／Oracle的确定性子Case可独立继续，不临场删断言。审核参考答案须同时命中题目ID／题干哈希／输入版本并新鲜回读，才可走声明的完整范围确定性降级。AI建议、自评和另一模型不能单独证明正式结果，语义结论需要独立审核金标或人工复核回执。超时、低置信、身份／输出契约不符时停止依赖动作，不提交固定无关内容；保留原ANSWER_REQUIRED交接与执行器。

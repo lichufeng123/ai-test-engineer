@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "catalog_id": "METHODS",
+  "capabilities": [
+    {
+      "capability_id": "dialogue-answer",
+      "role": "semantic_answering",
+      "input_contract": "same question and request identity",
+      "output_contract": "scoped answer through existing one-use handoff",
+      "conclusion_authority": "input_provider",
+      "timeout_seconds": 90,
+      "stop_conditions": [
+        "timeout",
+        "identity mismatch"
+      ],
+      "fallback_policy": "block dependent case"
+    }
+  ]
+}

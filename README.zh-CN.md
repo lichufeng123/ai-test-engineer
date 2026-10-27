@@ -301,3 +301,7 @@ MIT，详见 [LICENSE](LICENSE)。
 框架已接入 `ai-test defect-*`，调用项目本机配置的私有CLI。每轮先让用户选版本并绑定执行run_id，问题确认且提单已授权后提交；图片放重现步骤、视频放附件，写后验证成功才回填Bug引用。人员/内部地址/凭据不进入公开框架。详见 [缺陷提单适配器](docs/DEFECT_SUBMISSION.md)。快速模式若缺目标适配器前置只阻塞提单，不编造正式Case、不倒推快速证据无效。
 
 `ai-test nowledge-usage --session <本地JSONL> --latest-turn --compact` 恢复本地脱敏用量分析；整轮官方用量与Nowledge估算体量分开，账本写入可选，当前使用macOS/Linux文件锁。
+
+## AI testing readiness
+
+动态问答、生成内容和语义复核先按[AI参与测试路由](docs/AI_ASSISTED_TESTING_ROUTING.zh-CN.md)读取项目能力目录并生成v2准备度建议；确定性执行器负责动作，AI只履行声明职责，正式结论仍需独立Oracle。缺少必需能力只阻塞相关完整Case。

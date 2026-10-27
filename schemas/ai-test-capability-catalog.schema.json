@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI test capability method catalog",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "catalog_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default_strategy": {
+            "enum": [
+              "ai_assisted",
+              "deterministic",
+              "human_semantic_review",
+              "hybrid_required"
+            ]
+          },
+          "capability_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "deterministic_responsibilities": {
+            "type": "string",
+            "minLength": 1
+          },
+          "oracle_boundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "testability_suggestion": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "feature_id",
+          "name",
+          "default_strategy",
+          "capability_ids",
+          "deterministic_responsibilities",
+          "oracle_boundary",
+          "testability_suggestion"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "catalog_id",
+    "capabilities"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "capability": {
+      "type": "object",
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": [
+            "answer_blueprint_rendering",
+            "diagnosis_and_repair_advisory",
+            "fixture_content_generation",
+            "navigation_advisory",
+            "semantic_answering",
+            "semantic_quality_review",
+            "visual_observation"
+          ]
+        },
+        "input_contract": {
+          "type": "string",
+          "minLength": 1
+        },
+        "output_contract": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conclusion_authority": {
+          "enum": [
+            "advisory_only",
+            "evidence_reviewer",
+            "human_required",
+            "input_provider"
+          ]
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "stop_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "fallback_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "configured": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "capability_id",
+        "role",
+        "input_contract",
+        "output_contract",
+        "conclusion_authority",
+        "timeout_seconds",
+        "stop_conditions",
+        "fallback_policy"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -16,25 +16,326 @@
     "excluded_case_ids"
   ],
   "properties": {
-    "schema_version": {"const": 1},
-    "plan_id": {"type": "string"},
-    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "target_environment": {"type": "string"},
-    "scope_confirmed": {"type": "boolean"},
-    "environment_confirmed": {"type": "boolean"},
-    "account_roles_confirmed": {"type": "boolean"},
-    "data_plan_confirmed": {"type": "boolean"},
-    "available_role_ids": {"type": "array", "items": {"type": "string"}},
-    "ready_fixture_ids": {"type": "array", "items": {"type": "string"}},
-    "execution_targets_confirmed": {"type": "boolean"},
-    "hardware_fixtures_confirmed": {"type": "boolean"},
-    "available_execution_target_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "ready_hardware_fixture_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "excluded_case_ids": {"type": "array", "items": {"type": "string"}},
-    "confirmed_at": {"type": ["string", "null"]},
-    "password": {"not": {}},
-    "token": {"not": {}},
-    "cookie": {"not": {}},
-    "credentials": {"not": {}}
-  }
+    "schema_version": {
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "target_environment": {
+      "type": "string"
+    },
+    "scope_confirmed": {
+      "type": "boolean"
+    },
+    "environment_confirmed": {
+      "type": "boolean"
+    },
+    "account_roles_confirmed": {
+      "type": "boolean"
+    },
+    "data_plan_confirmed": {
+      "type": "boolean"
+    },
+    "available_role_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ready_fixture_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_targets_confirmed": {
+      "type": "boolean"
+    },
+    "hardware_fixtures_confirmed": {
+      "type": "boolean"
+    },
+    "available_execution_target_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "ready_hardware_fixture_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "excluded_case_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confirmed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "password": {
+      "not": {}
+    },
+    "token": {
+      "not": {}
+    },
+    "cookie": {
+      "not": {}
+    },
+    "credentials": {
+      "not": {}
+    },
+    "catalog_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ai_capability_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unknown"
+            ]
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target_environment": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "catalog_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "capability_id",
+          "status",
+          "checked_at",
+          "target_environment",
+          "evidence_ref",
+          "catalog_sha256"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "oracle_resource_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "oracle_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "kind": {
+            "enum": [
+              "approved_semantic_gold",
+              "deterministic_source",
+              "human_review_receipt"
+            ]
+          },
+          "status": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unknown"
+            ]
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target_environment": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "review_status": {
+            "enum": [
+              "approved",
+              "pending",
+              "expired",
+              "rejected"
+            ]
+          },
+          "independent": {
+            "type": "boolean"
+          },
+          "review_receipt_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "oracle_id",
+          "version",
+          "sha256",
+          "kind",
+          "status",
+          "checked_at",
+          "target_environment",
+          "evidence_ref",
+          "review_status",
+          "independent"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "reference_answer_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fallback_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capability_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "question_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "input_asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "const": "approved_reference"
+          },
+          "question_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "review_status": {
+            "const": "approved_reference"
+          },
+          "full_case_scope": {
+            "const": true
+          },
+          "status": {
+            "enum": [
+              "available",
+              "unavailable",
+              "unknown"
+            ]
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target_environment": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "fallback_id",
+          "case_id",
+          "capability_id",
+          "question_id",
+          "input_asset_id",
+          "version",
+          "kind",
+          "question_sha256",
+          "sha256",
+          "review_status",
+          "full_case_scope",
+          "status",
+          "checked_at",
+          "target_environment",
+          "evidence_ref"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": 2
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "catalog_sha256",
+          "confirmed_at"
+        ],
+        "properties": {
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ]
 }

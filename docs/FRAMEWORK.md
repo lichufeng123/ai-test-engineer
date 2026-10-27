@@ -374,3 +374,7 @@ COMPLETE
 成功要求退出码0、`status=verified` 与媒体验证通过，不代表产品用例通过或业务结果可晋升；返回 `product_verdict=not_evaluated`。未知创建状态保留原run/issue回执，只读对账后恢复同一Bug，禁止盲目重发。内部跟踪器URL、真实媒体及账号仅存受控私有运行目录，不进入公开资产。配置、Python调用、默认发现和完整协议见 [缺陷提单适配器](DEFECT_SUBMISSION.md)。
 
 `nowledge-usage` 对本地Codex JSONL计算无正文的Nowledge估算和整轮官方用量。无法识别的动态调用不会编造统计；账本默认不写，显式 `--write-ledger` 才按session/turn幂等更新，当前仅macOS/Linux支持文件锁。该模块属于框架，插件仓库不复制其源码/测试。
+
+## AI testing readiness
+
+动态问答、生成内容和语义复核先按[AI参与测试路由](AI_ASSISTED_TESTING_ROUTING.zh-CN.md)读取项目能力目录并生成v2准备度建议；确定性执行器负责动作，AI只履行声明职责，正式结论仍需独立Oracle。缺少必需能力只阻塞相关完整Case。

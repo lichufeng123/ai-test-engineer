@@ -66,3 +66,11 @@ metadata:
 ## 可选缺陷提单
 
 测试开始时按项目配置查询并确认本轮版本；完成问题定性后，已获提单授权且适配器前置就绪时使用 `ai-test defect-submit --execute`，遵循 [统一提单流程](../requirement-grounded-functional-testing/references/defect-submission.md)。只回填已验证的Bug引用；缺配置、凭据、版本或适配器模式前置时只阻塞提单，不阻塞其余已授权测试，不为快速探针伪造正式Case。
+
+## AI能力与自动化可测性路由
+
+动态问答、开放陪练、内容生成或语义复核的用例设计／执行，必须先读取项目AI测试方法目录并遵循[AI参与测试路由](../../../docs/AI_ASSISTED_TESTING_ROUTING.zh-CN.md)。新增或实质修改Case先登记testability_assessments，主动评估隔离Fixture、版本化审核参考答案／blueprint、独立金标／观测点、维护人及清理策略，不能直接永久判manual_only。该推导不扩大业务写权限。
+
+用既有readiness-plan／readiness-check生成v2计划和执行建议，逐稳定Case声明execution_strategy、ai_capability_bindings及assertion_oracle_bindings。向用户说明具体“AI＋Minium／Playwright／API”分工。能力目录配置不等于当前可用；本次ai_capability_checks和oracle_resource_checks须有新鲜时间、正确环境、版本／哈希及非敏感证据。
+
+没有运行时模型时，开放式blueprint不替代逐轮语义回答，也不是评分Oracle；完整问答Case保持blocked。只有已审核且有独立ID／预期／Oracle的确定性子Case可独立继续，不临场删断言。审核参考答案须同时命中题目ID／题干哈希／输入版本并新鲜回读，才可走声明的完整范围确定性降级。AI建议、自评和另一模型不能单独证明正式结果，语义结论需要独立审核金标或人工复核回执。超时、低置信、身份／输出契约不符时停止依赖动作，不提交固定无关内容；保留原ANSWER_REQUIRED交接与执行器。

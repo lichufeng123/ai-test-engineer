@@ -1,0 +1,145 @@
+{
+  "schema_version": 2,
+  "plan_id": "ARP-PRACTICE-EXAMPLE",
+  "requirement_baseline_id": "REQ-PRACTICE-EXAMPLE",
+  "feature": "Fictional customer practice lab",
+  "automation_scope": {
+    "platforms": [
+      "web"
+    ],
+    "environments": [
+      "sit"
+    ],
+    "business_flow_ids": [
+      "BF-BADGE-001"
+    ],
+    "case_ids": [
+      "TC-001",
+      "TC-002"
+    ]
+  },
+  "case_requirements": [
+    {
+      "case_id": "TC-001",
+      "required_role_ids": [
+        "store_admin"
+      ],
+      "required_fixture_ids": [],
+      "required_environment_ids": [
+        "sit"
+      ],
+      "execution_strategy": "deterministic",
+      "ai_capability_bindings": [],
+      "assertion_oracle_bindings": [
+        {
+          "assertion_id": "TC-001-STATE",
+          "required_conclusion_authority": "deterministic_source",
+          "oracle_refs": [
+            "state-source"
+          ],
+          "usage": "state_persistence"
+        }
+      ]
+    },
+    {
+      "case_id": "TC-002",
+      "required_role_ids": [
+        "store_admin"
+      ],
+      "required_fixture_ids": [
+        "unassigned_recording"
+      ],
+      "required_environment_ids": [
+        "sit"
+      ],
+      "execution_strategy": "hybrid_required",
+      "ai_capability_bindings": [
+        {
+          "capability_id": "dialogue-answer",
+          "necessity": "required"
+        }
+      ],
+      "assertion_oracle_bindings": [
+        {
+          "assertion_id": "TC-002-STATE",
+          "required_conclusion_authority": "deterministic_source",
+          "oracle_refs": [
+            "state-source"
+          ],
+          "usage": "state_persistence"
+        }
+      ]
+    }
+  ],
+  "account_requirements": [
+    {
+      "role_id": "store_admin",
+      "purpose": "Fictional operator",
+      "status": "needed"
+    }
+  ],
+  "fixture_requirements": [
+    {
+      "fixture_id": "unassigned_recording",
+      "purpose": "Isolated conversation input",
+      "case_ids": [
+        "TC-002"
+      ],
+      "status": "needed"
+    }
+  ],
+  "evidence_plan": {
+    "screenshots": [
+      "initial state",
+      "result"
+    ],
+    "records": [
+      "independent audit"
+    ]
+  },
+  "manual_only_case_ids": [],
+  "open_questions": [],
+  "catalog_ref": {
+    "path": "ai-test-capability-catalog.example.json",
+    "catalog_id": "METHODS",
+    "sha256": "cea7d5639f6ec8425c42af71c7fecd2918623f2a7def75735cbe0ca8955d6045"
+  },
+  "resource_check_max_age_seconds": 300,
+  "oracle_resources": [
+    {
+      "oracle_id": "state-source",
+      "version": "1",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "deterministic_source",
+      "independence_basis": "independent event audit, not model output"
+    }
+  ],
+  "testability_assessments": [
+    {
+      "assessment_id": "TA-1",
+      "feature_id": "dialogue",
+      "case_ids": [
+        "TC-001",
+        "TC-002"
+      ],
+      "instability_sources": [
+        "generated questions"
+      ],
+      "disposition": "runtime_ai_required",
+      "basis": "reviewed dynamic dialogue goal",
+      "assets": [
+        "dedicated scene and versioned blueprint"
+      ],
+      "target_environment": "sit",
+      "cost_benefit": "reusable regression, bounded maintenance",
+      "prerequisites": [
+        "isolated fixture"
+      ],
+      "owner": "owner_pending",
+      "freeze_and_drift": "stable id, version, hash before action",
+      "retention_cleanup": "retain dedicated scene, expire sessions",
+      "oracle_gap": "semantic gold pending; state-only case scope",
+      "next_step": "prepare reviewed input and independent audit"
+    }
+  ]
+}

@@ -261,3 +261,7 @@ MIT. See [LICENSE](LICENSE).
 `ai-test defect-*` connects a reviewed project-local tracker CLI to standard and rapid testing workflows. Confirm a version once per execution, submit only confirmed/authorized defects, embed images in reproduction steps, attach videos, and verify the provider receipt before recording the Bug reference. Private personnel, endpoints and credentials remain outside this public package. See [configuration, automation calls and recovery](docs/DEFECT_SUBMISSION.md). A provider missing rapid-mode prerequisites blocks only filing, never fabricates formal cases or invalidates rapid evidence.
 
 `ai-test nowledge-usage --session <local-jsonl> --latest-turn --compact` restores local privacy-safe usage analysis. Official whole-turn tokens and estimated Nowledge volume remain separate; ledger writes are optional and currently require macOS/Linux file locking.
+
+## AI testing readiness
+
+动态问答、生成内容和语义复核先按[AI参与测试路由](docs/AI_ASSISTED_TESTING_ROUTING.zh-CN.md)读取项目能力目录并生成v2准备度建议；确定性执行器负责动作，AI只履行声明职责，正式结论仍需独立Oracle。缺少必需能力只阻塞相关完整Case。

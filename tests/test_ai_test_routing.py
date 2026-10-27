@@ -202,6 +202,22 @@ class RoutingGateTest(unittest.TestCase):
 
 
 class RoutingCliTest(unittest.TestCase):
+    def test_shipped_catalog_example_and_v2_template_are_consistent(self):
+        from ai_test_framework.cli import main
+        root=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            out=Path(directory)/'plan.json'
+            with contextlib.redirect_stdout(io.StringIO()):
+                main(['readiness-plan','--input',str(root/'templates/automation-readiness-v2.example.json'),
+                      '--output',str(out)])
+            p=json.loads(out.read_text())
+            self.assertEqual(p['schema_version'],2)
+            self.assertEqual({x['execution_strategy'] for x in p['case_requirements']},
+                             {'deterministic','hybrid_required'})
+        for path in ['schemas/ai-test-capability-catalog.schema.json',
+                     'docs/AI_ASSISTED_TESTING_ROUTING.zh-CN.md']:
+            self.assertTrue((root/path).is_file(),path)
+
     def test_catalog_loaded_relative_to_source_and_drift_detected_before_execution(self):
         from ai_test_framework.cli import main
         with tempfile.TemporaryDirectory() as directory:

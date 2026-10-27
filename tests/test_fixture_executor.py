@@ -32,6 +32,22 @@ class ExecutorTests(unittest.TestCase):
         result=self.apply(self.r,plan,self.p,plan['sha256']);self.assertEqual(result['status'],'ready')
         self.apply(self.r,plan,self.p,plan['sha256']);self.assertEqual(self.p.creates,1)
         self.assertEqual(self.r.resolve('member.smoke','1','sit-shop')['local_id'],'m1')
+    def test_after_verified_hook_runs_only_after_binding_health_and_step_journal(self):
+        calls=[]
+        def after(bp,target,observation):
+            binding=self.r.resolve(bp['fixture_key'],bp['version'],target['target_ref'])
+            self.assertEqual(binding['local_id'],observation['local_id'])
+            with self.r.tx()as db:
+                self.assertEqual(db.execute("select state from intents where step='member.smoke'").fetchone()[0],'verified')
+            calls.append(bp['fixture_key'])
+        self.p.after_verified=after;plan=self.plan()
+        self.assertEqual(self.apply(self.r,plan,self.p,plan['sha256'])['status'],'ready')
+        self.assertEqual(calls,['member.smoke'])
+        self.p.unknown=True;self.p.objects={}
+        # Unknown writes never call a post-verification release hook.
+        self.r.add_blueprints([{**BLUEPRINT,'fixture_key':'another'}]);need={**self.need,'fixture_key':'another'}
+        plan=self.prepare(self.r,[need],'sit-shop',['member']);self.apply(self.r,plan,self.p,plan['sha256'])
+        self.assertEqual(calls,['member.smoke'])
     def test_unknown_create_is_never_resent_even_with_new_plan(self):
         plan=self.plan();self.p.unknown=True
         self.assertEqual(self.apply(self.r,plan,self.p,plan['sha256'])['status'],'blocked')

@@ -77,6 +77,12 @@ def apply(registry, plan, provider, authorization_hash):
             with registry.tx() as db:
                 db.execute('insert or replace into intents values(?,?,?,?,?)',(iid,plan['sha256'],key,'verified',canonical({'fixture_key':key,'version':version,'target_ref':ref})))
             unknown=False
+            # Trusted providers may settle physical readers only after durable
+            # verification, never from detail() before bind/observe commits.
+            after=getattr(provider,'after_verified',None)
+            if after is not None:
+                require(callable(after),'PROVIDER_AFTER_VERIFIED_INVALID')
+                after(bp,target,observation)
             results.append({'fixture_key':key,'version':version,'target_ref':ref,'status':'verified','action':'reused' if matches else 'created'})
         return {'status':'ready','plan_sha256':plan['sha256'],'steps':results}
     except Exception as e:

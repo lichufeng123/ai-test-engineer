@@ -219,6 +219,13 @@ def evaluate_execution_readiness(
     )
 
     error_codes: List[str] = []
+    if plan.get('schema_version') not in (1, 2):
+        error_codes.append('unsupported_schema_version')
+    if plan.get('schema_version') == 2:
+        if confirmation.get('schema_version') != 2:
+            error_codes.append('confirmation_schema_mismatch')
+        if confirmation.get('catalog_sha256') != plan['catalog_ref']['sha256']:
+            error_codes.append('ai_catalog_hash_mismatch')
     expected_hash = plan_sha256(plan)
     if confirmation["plan_sha256"] != expected_hash:
         error_codes.append("plan_hash_mismatch")
@@ -239,7 +246,7 @@ def evaluate_execution_readiness(
     gate_blocked = bool(error_codes)
     if gate_blocked:
         return {
-            "schema_version": 1,
+            "schema_version": plan.get('schema_version', 1),
             "status": "blocked",
             "plan_id": plan.get("plan_id"),
             "plan_sha256": expected_hash,
@@ -349,6 +356,11 @@ def evaluate_execution_readiness(
                                     'execution_action':'skip_without_retry','resume_condition':'fixture_observation_changed'})
                     already_blocked.add(case_id)
 
+    routing = {}
+    if plan.get('schema_version') == 2:
+        from .ai_test_routing import merge_routing
+        routing = merge_routing(plan, confirmation, ready, blocked, missing_ledger, previous_missing)
+
     if ready and blocked:
         status = "passed_with_case_blocks"
     elif ready:
@@ -357,7 +369,7 @@ def evaluate_execution_readiness(
         status = "blocked"
 
     return {
-        "schema_version": 1,
+        "schema_version": plan.get('schema_version', 1),
         "status": status,
         "plan_id": plan["plan_id"],
         "plan_sha256": expected_hash,
@@ -368,4 +380,5 @@ def evaluate_execution_readiness(
         "missing_prerequisites": missing_ledger,
         "error_codes": [],
         **({'fixture_resource_checks':resource_checks} if plan.get('business_fixture_needs') else {}),
+        **routing,
     }

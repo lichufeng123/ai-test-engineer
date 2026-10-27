@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -161,5 +162,146 @@ def validate_routing_plan(plan: Dict[str, Any], catalog, provenance):
     require(covered == set(cases), 'testability_case_uncovered')
     age = plan.setdefault('resource_check_max_age_seconds', 300)
     require(type(age) is int and 0 < age <= 3600, 'resource_check_age_invalid')
+    fallbacks = records(plan.get('deterministic_fallbacks', []), 'fallback_id', 'reference_fallback')
+    pairs = set()
+    for fallback in fallbacks.values():
+        case = cases.get(fallback.get('case_id'), {})
+        cap = capabilities.get(fallback.get('capability_id'), {})
+        pair = (fallback.get('case_id'), fallback.get('capability_id'))
+        require(pair not in pairs, 'duplicate_reference_fallback_binding')
+        pairs.add(pair)
+        require(fallback.get('kind') == 'approved_reference'
+                and case.get('execution_strategy') == 'ai_assisted'
+                and cap.get('role') == 'semantic_answering'
+                and fallback.get('capability_id') in {b['capability_id'] for b in case.get('ai_capability_bindings', [])}
+                and fallback.get('review_status') == 'approved_reference'
+                and fallback.get('full_case_scope') is True
+                and all(text(fallback.get(k)) for k in ['question_id', 'input_asset_id', 'version'])
+                and all(sha(fallback.get(k)) for k in ['question_sha256', 'sha256']),
+                'invalid_deterministic_fallback')
     plan['ai_capabilities'] = [copy.deepcopy(capabilities[k]) for k in sorted(referenced)]
+
+
+def timestamp(value):
+    try:
+        result = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return result.timestamp() if result.tzinfo is not None else None
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def fresh_check(check, confirmation, max_age):
+    if not check:
+        return False
+    now = datetime.now(timezone.utc).timestamp()
+    checked = timestamp(check.get('checked_at'))
+    confirmed = timestamp(confirmation.get('confirmed_at'))
+    return (checked is not None and confirmed is not None
+            and 0 <= now - checked <= max_age and 0 <= now - confirmed <= max_age
+            and check.get('status') == 'available' and text(check.get('evidence_ref'))
+            and check.get('target_environment') == confirmation.get('target_environment'))
+
+
+def evaluate_routing(plan, confirmation):
+    """Evaluate attestations, retaining full Case/Oracle scope on every path."""
+    # Revalidate frozen contracts too; callers need not have used the builder.
+    source = copy.deepcopy(plan)
+    frozen = source.pop('ai_capabilities', None)
+    require(isinstance(frozen, list), 'frozen_ai_capabilities_required')
+    validate_routing_plan(source, dict(schema_version=1, catalog_id=plan['catalog_ref']['catalog_id'],
+                                      capabilities=frozen), plan['catalog_ref'])
+    require(source['ai_capabilities'] == frozen, 'frozen_ai_capabilities_mismatch')
+    capabilities = {c['capability_id']: c for c in frozen}
+    oracles = {o['oracle_id']: o for o in plan['oracle_resources']}
+    checks = records(confirmation.get('ai_capability_checks', []), 'capability_id', 'ai_check')
+    oracle_checks = records(confirmation.get('oracle_resource_checks', []), 'oracle_id', 'oracle_check')
+    references = records(confirmation.get('reference_answer_checks', []), 'fallback_id', 'reference_check')
+    fallbacks = {f['fallback_id']: f for f in plan.get('deterministic_fallbacks', [])}
+    require(set(checks) <= set(capabilities), 'unknown_ai_check')
+    require(set(oracle_checks) <= set(oracles), 'unknown_oracle_check')
+    require(set(references) <= set(fallbacks), 'unknown_reference_check')
+    age = plan['resource_check_max_age_seconds']
+    catalog_current = confirmation.get('catalog_sha256') == plan['catalog_ref']['sha256']
+    ready_oracles = set()
+    for oid, oracle in oracles.items():
+        check = oracle_checks.get(oid)
+        if (fresh_check(check, confirmation, age) and check.get('independent') is True
+                and check.get('review_status') == 'approved'
+                and all(check.get(k) == oracle[k] for k in ('version', 'sha256', 'kind'))
+                and (oracle['kind'] == 'deterministic_source' or text(check.get('review_receipt_ref')))):
+            ready_oracles.add(oid)
+    warnings = []
+    case_blocks = {}
+    recommendations = []
+    for case in plan['case_requirements']:
+        cid = case['case_id']
+        missing_ai = []
+        used_references = []
+        ai_roles = []
+        for binding in case['ai_capability_bindings']:
+            ident = binding['capability_id']
+            cap = capabilities[ident]
+            check = checks.get(ident)
+            available = (catalog_current and fresh_check(check, confirmation, age)
+                         and check.get('catalog_sha256') == plan['catalog_ref']['sha256'])
+            ai_roles.append(dict(capability_id=ident, role=cap['role'],
+                                 conclusion_authority=cap['conclusion_authority'],
+                                 necessity=binding['necessity'], available=bool(available)))
+            if available:
+                continue
+            fallback = next((f for f in fallbacks.values() if f['case_id'] == cid
+                             and f['capability_id'] == ident), None)
+            if fallback:
+                observed = references.get(fallback['fallback_id'])
+                if (fresh_check(observed, confirmation, age)
+                        and all(observed.get(k) == v for k, v in fallback.items())):
+                    used_references.append(fallback['fallback_id'])
+                    continue
+            if binding['necessity'] == 'required':
+                missing_ai.append(ident)
+            elif binding['necessity'] == 'recommended':
+                warnings.append(dict(case_id=cid, capability_id=ident,
+                                     reason='recommended_ai_unavailable', formal_scope_unchanged=True))
+        required_oracles = {oid for a in case['assertion_oracle_bindings'] for oid in a['oracle_refs']}
+        missing_oracles = sorted(required_oracles - ready_oracles)
+        if missing_ai or missing_oracles:
+            case_blocks[cid] = dict(missing_ai_capability_ids=sorted(missing_ai),
+                                    missing_oracle_ids=missing_oracles)
+        platforms = plan['automation_scope']['platforms']
+        recommendations.append(dict(case_id=cid, execution_strategy=case['execution_strategy'],
+            deterministic_executors=platforms, ai_responsibilities=ai_roles,
+            assertion_oracle_bindings=copy.deepcopy(case['assertion_oracle_bindings']),
+            deterministic_fallback_ids=used_references,
+            conclusion_scope='full_declared_case_only; no runtime assertion trimming',
+            recommendation=('按冻结用例执行；AI只提供声明的输入或建议，确定性执行器负责动作和状态回读；'
+                            '正式断言仍须全部独立Oracle；缺少必需前置时阻塞整条用例。')))
+    return dict(blocks=case_blocks, warnings=warnings, execution_recommendations=recommendations)
+
+
+def merge_routing(plan, confirmation, ready, blocked, ledger, previous_missing):
+    """Merge resource blocks into the existing readiness gate and retry ledger."""
+    route = evaluate_routing(plan, confirmation)
+    excluded = set(confirmation['excluded_case_ids']) | set(plan.get('manual_only_case_ids', []))
+    previous = {item.get('prerequisite_fingerprint'): item for item in (previous_missing or [])}
+    by_case = {b['case_id']: b for b in blocked}
+    for cid, missing in route['blocks'].items():
+        if cid in excluded:
+            continue
+        if cid in ready:
+            ready.remove(cid)
+        row = by_case.get(cid)
+        if row is None:
+            row = dict(case_id=cid, execution_action='skip_without_retry',
+                       resume_condition='prerequisite_fingerprint_changed')
+            blocked.append(row)
+            by_case[cid] = row
+        row.update(missing)
+        fingerprint = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        old = previous.get(fingerprint)
+        ledger[:] = [item for item in ledger if item['case_id'] != cid]
+        ledger.append(copy.deepcopy(old) if old else dict(
+            case_id=cid, prerequisite_fingerprint=fingerprint, **missing,
+            first_detected_at=confirmation.get('confirmed_at'), retry_count=0,
+            retry_allowed=False, next_action='await_prerequisite'))
+    return {key: route[key] for key in ('warnings', 'execution_recommendations')}
 

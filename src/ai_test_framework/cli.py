@@ -566,6 +566,11 @@ def main(argv=None) -> int:
         if source.get('schema_version') == 2:
             from .ai_test_routing import load_catalog
             catalog, provenance = load_catalog(source, args.ai_capability_catalog, Path(args.input).resolve().parent)
+            if source.get('catalog_ref'):
+                if source['catalog_ref'] != provenance:
+                    raise ValueError('ai_catalog_provenance_mismatch')
+                provenance['path'] = str((Path(args.input).resolve().parent / provenance['path']).resolve())
+            source['catalog_ref'] = provenance
             routing_inputs = dict(ai_capability_catalog=catalog, catalog_provenance=provenance)
         value = build_readiness_plan(source, **routing_inputs)
         output = Path(args.output)
@@ -574,13 +579,21 @@ def main(argv=None) -> int:
         return _emit(value)
     if args.command == "readiness-check":
         readiness_source = _read(args.plan)
+        confirmation = _read(args.confirmation)
+        if readiness_source.get('schema_version') == 2:
+            import hashlib
+            catalog_path = Path(readiness_source['catalog_ref']['path'])
+            try:
+                confirmation['catalog_sha256'] = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+            except OSError:
+                confirmation['catalog_sha256'] = None
         fixture_registry = None
         if readiness_source.get('business_fixture_needs'):
             from .fixtures.registry import Registry, database_path
             fixture_registry = Registry(database_path(args.root))
         value = evaluate_execution_readiness(
             readiness_source,
-            _read(args.confirmation),
+            confirmation,
             previous_missing=_read(args.previous_missing) if args.previous_missing else None,
             fixture_registry=fixture_registry,
         )

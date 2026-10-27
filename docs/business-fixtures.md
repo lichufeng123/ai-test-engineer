@@ -83,3 +83,12 @@ Provider 代码直接使用 `executor.prepare/apply/reconcile`，不从 JSON 加
 未知写入仍不自动重发。Provider已通过完整原生上下文证明异步结束、对象确实不存在、全物理副作用集未变化且旧进程停止时，可调用 `coordination.recover_no_effect` 原子恢复精确claim与lease；过期本身不是依据。恢复观察必须晚于登记库当前观察，不能以旧快照覆盖新事实。任一资源缺失或漂移均不释放。
 
 `executor.authorize_absent_retry` 接受新的显式授权、同版计划及新鲜的已结束/不存在证明，重新只读查重，并检查租户没有未对账租约、对象没有既有绑定。证明必须包含本次unknown scope整行的SHA-256（含owner），不能授权后续新尝试。原意图改为reconciled_absent，原scope释放且审计保留完整旧行和证明；该函数不创建业务数据，也不把失败写成成功。业务失败原因未解决时不再次创建。
+
+
+## 过期健康检查与已确认失效
+
+可信 Provider 可用 `Registry.acquire_health_check(requests, run_id, owner_claim=...)` 在刷新前原子领取物理读租约。它只接受 read，允许读取“状态仍为 healthy、但 TTL 已过期”的既有快照；不会让普通消费者使用过期数据，也不能越过 consumed／quarantined、物理别名上的写锁或未对账的过期租约。刷新及 `observe` 完成前持续持锁，结束须另做新鲜回读后释放。不能先检查没有写锁、离开事务再读取并更新健康，否则期间仍可插入竞争写者。
+
+完整可信回读已确认对象消失、身份或父级漂移时，Provider 用 `Registry.invalidate(key, version, target, reason, evidence_ref)` 将该物理对象的全部绑定别名隔离，阻止后续 resolve／领取。该方法不删除映射、不释放租约、不创建新对象、不恢复健康；暂时网络不可用或目录不完整不能当作已确认失效。未知持锁仍须按原恢复协议对账，不能依赖 TTL 自动解除。
+
+本轮公共 Fixture 检查57项通过，另有私有原执行器检查；这些数量是工程验证，不是业务用例覆盖率。接入方仍须证明真实登录身份、角色及组织，而不能只比较门店标题或环境变量。

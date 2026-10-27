@@ -7,7 +7,7 @@
 
 | 需求ID | 标题 | 功能 | 状态 | 阶段 | 环境 | 平台 | 最近更新 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| REQ-FRAMEWORK-TEST-DATA-20261024-001 | 框架通用测试数据复用、跨环境工厂与快速查询 | framework-test-data | active | AUTOMATION_READINESS_PLANNING | local-design-only、sit-z1、prd-z99 | web | 2026-10-27T14:17:55.351916+00:00 |
+| REQ-FRAMEWORK-TEST-DATA-20261024-001 | 框架通用测试数据复用、跨环境工厂与快速查询 | framework-test-data | active | AUTOMATION_READINESS_PLANNING | local-design-only、sit-z1、prd-z99 | web | 2026-10-27T14:55:41.089754+00:00 |
 
 ## 当前快速测试
 

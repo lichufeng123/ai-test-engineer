@@ -314,6 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     readiness_plan.add_argument("--input", required=True)
     readiness_plan.add_argument("--output", required=True)
+    readiness_plan.add_argument("--ai-capability-catalog", help="受控AI测试方法目录；与source中的目录引用共同核验")
 
     readiness_check = commands.add_parser(
         "readiness-check", help="执行前复核范围、环境、账号角色和测试数据"
@@ -560,7 +561,13 @@ def main(argv=None) -> int:
     if args.command == "plugin-build":
         return _emit(build_portable_plugin(Path(args.root), Path(args.output)))
     if args.command == "readiness-plan":
-        value = build_readiness_plan(_read(args.input))
+        source = _read(args.input)
+        routing_inputs = {}
+        if source.get('schema_version') == 2:
+            from .ai_test_routing import load_catalog
+            catalog, provenance = load_catalog(source, args.ai_capability_catalog, Path(args.input).resolve().parent)
+            routing_inputs = dict(ai_capability_catalog=catalog, catalog_provenance=provenance)
+        value = build_readiness_plan(source, **routing_inputs)
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -72,7 +72,8 @@ def _case_ids(plan: Dict[str, Any]) -> List[str]:
     return list(plan.get("automation_scope", {}).get("case_ids", []))
 
 
-def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
+def build_readiness_plan(source: Dict[str, Any], *, ai_capability_catalog=None,
+                         catalog_provenance=None) -> Dict[str, Any]:
     """Validate and freeze a requirement-stage automation readiness plan."""
 
     _assert_no_sensitive_fields(source)
@@ -90,8 +91,14 @@ def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
             "evidence_plan",
         ],
     )
-    if source["schema_version"] != 1:
+    if source["schema_version"] not in (1, 2):
         raise ValueError("unsupported_schema_version")
+    if source['schema_version'] == 1 and (
+        any(key in source for key in ('catalog_ref', 'ai_capabilities', 'oracle_resources', 'testability_assessments'))
+        or any('execution_strategy' in c or 'ai_capability_bindings' in c
+               or 'assertion_oracle_bindings' in c for c in source['case_requirements'])
+    ):
+        raise ValueError('ai_contract_requires_v2')
 
     plan = copy.deepcopy(source)
     plan.setdefault("manual_only_case_ids", [])
@@ -154,6 +161,10 @@ def build_readiness_plan(source: Dict[str, Any]) -> Dict[str, Any]:
         if unknown_hardware:
             raise ValueError("unknown_hardware_fixture_id:" + ",".join(sorted(unknown_hardware)))
 
+    if plan['schema_version'] == 2:
+        from .ai_test_routing import validate_routing_plan
+        _assert_no_sensitive_fields(ai_capability_catalog)
+        validate_routing_plan(plan, ai_capability_catalog, catalog_provenance)
     plan["plan_sha256"] = plan_sha256(plan)
     return plan
 
